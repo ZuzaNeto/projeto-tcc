@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Vocacional UFMA - Início</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-slate-900 to-slate-800 text-slate-100 flex flex-col items-center justify-center min-h-screen p-4 font-inter">
+    <div class="w-full max-w-md bg-slate-800/50 backdrop-blur-md shadow-2xl rounded-xl p-8 text-center">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-sky-400">Quiz Vocacional</h1>
+            <p class="text-slate-300 mt-2">Engenharias & BICT - UFMA</p>
+        </header>
+
+        <main>
+            <div class="mb-6">
+                <label for="nickname" class="block text-sm font-medium text-slate-300 mb-1 text-left">Seu Apelido:</label>
+                <input type="text" id="nickname" name="nickname" placeholder="Ex: SuperDev"
+                       class="w-full px-4 py-3 rounded-lg bg-slate-700 border-2 border-slate-600 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/50 text-slate-100 placeholder-slate-400 outline-none transition-all duration-300">
+            </div>
+
+            <button id="joinQuizBtn"
+                    class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out mb-4">
+                Entrar no Quiz
+            </button>
+
+            <button id="startQuizBtn"
+                    class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out hidden">
+                Iniciar Quiz Agora!
+            </button>
+            <p id="statusMessage" class="mt-4 text-sm text-sky-300 min-h-[20px]"></p>
+        </main>
+
+        <footer class="mt-8">
+            <p class="text-xs text-slate-500">&copy; 2024 Quiz Vocacional UFMA</p>
+        </footer>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
