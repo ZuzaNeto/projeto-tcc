@@ -1,0 +1,72 @@
+/* Adiciona a fonte Inter globalmente */
+body {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Estilos para os botões de opção que são adicionados/removidos via JS para feedback */
+/* Essas classes agora são apenas para as animações e cores específicas de feedback,
+   o layout base virá das classes Tailwind aplicadas diretamente no JS. */
+
+.quiz-option-button.correct { /* Nome da classe ligeiramente alterado para evitar conflito se 'correct' for genérico */
+    background-color: #10b981; /* emerald-500 */
+    border-color: #34d399; /* emerald-400 */
+    color: white; /* text-white */
+    /* Se o @apply acima não funcionar com o CDN em um arquivo CSS externo, precisaremos definir essas cores manualmente:
+    background-color: #10b981;  emerald-500
+    border-color: #34d399;  emerald-400
+    color: white;
+    */
+    animation: pulse-correct 0.6s ease-out;
+}
+
+.quiz-option-button.incorrect {
+    background-color: #ef4444; /* red-500 */
+    border-color: #f87171; /* red-400 */
+    color: white; /* text-white */
+    animation: shake-wrong 0.5s ease-out;
+}
+
+/* Animações */
+@keyframes pulse-correct {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 213, 115, 0.4); }
+    70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(46, 213, 115, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 213, 115, 0); }
+}
+
+@keyframes shake-wrong {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
+/* Loader simples */
+.loader {
+    border-top-color: #0ea5e9; /* sky-500 (Tailwind color) */
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Scrollbar customizada para o ranking */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(71, 85, 105, 0.5); /* slate-600 com opacidade */
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #0ea5e9; /* sky-500 */
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #0284c7; /* sky-600 */
+}
