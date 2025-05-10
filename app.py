@@ -2,7 +2,7 @@
 import os
 from flask import Flask, render_template, session, request, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from flask_cors import CORS
+from flask_cors import CORS # Importado, mas a configuração principal é no SocketIO
 import time
 import threading
 from collections import defaultdict
@@ -11,22 +11,37 @@ import random
 import string
 
 # Configuração de logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG) # DEBUG para mais detalhes
 logger = logging.getLogger(__name__)
 werkzeug_logger = logging.getLogger('werkzeug')
-werkzeug_logger.setLevel(logging.INFO)
+werkzeug_logger.setLevel(logging.INFO) # Logs do servidor Flask (GET, POST, etc.)
+
+# Tenta importar eventlet para verificar se está disponível
+try:
+    import eventlet
+    eventlet.monkey_patch() # Necessário para que outras bibliotecas cooperem com eventlet
+    ASYNC_MODE = 'eventlet'
+    logger.info("Eventlet encontrado e monkey_patch() aplicado.")
+except ImportError:
+    logger.warning("Eventlet não encontrado. Usando async_mode='threading'. Isso pode ser menos estável para WebSockets.")
+    ASYNC_MODE = 'threading'
+
 
 # --- Configuração da Aplicação Flask ---
 app = Flask(__name__, template_folder='templates', static_folder='static')
-app.config['SECRET_KEY'] = 'bict_quiz_ufma_salas_super_secretas!'
-CORS(app, resources={r"/*": {"origins": "*"}})
-socketio = SocketIO(app,
-                    cors_allowed_origins="*",
-                    logger=True,
-                    engineio_logger=True,
-                    async_mode=None) # Deixa o SocketIO escolher (eventlet preferido)
+app.config['SECRET_KEY'] = 'bict_quiz_ufma_salas_super_secretas_eventlet!'
 
-logger.info(f"SocketIO async_mode selecionado: {socketio.async_mode}")
+# Configuração do SocketIO
+socketio = SocketIO(app,
+                    async_mode=ASYNC_MODE,
+                    cors_allowed_origins="*",
+                    logger=True,              # Ativa logs do python-socketio
+                    engineio_logger=True)     # Ativa logs do python-engineio
+
+logger.info(f"SocketIO inicializado com async_mode: {socketio.async_mode}")
+if socketio.async_mode != 'eventlet' and ASYNC_MODE == 'eventlet':
+    logger.error("Falha ao forçar async_mode='eventlet', mesmo com eventlet importado. Verifique a instalação.")
+
 
 # --- Definição das Questões (mesma estrutura de antes) ---
 class QuizOption:
@@ -58,33 +73,23 @@ new_quiz_questions = [QuizQuestion(q["id"], q["text"], [QuizOption(opt["id"], op
 TOTAL_QUESTIONS = len(new_quiz_questions)
 
 # --- Gerenciamento de Salas ---
-rooms_data = {} # room_pin: {"host_sid": str, "players": {sid: {"nickname": str, "score": int, "answers": {}}}, "game_state": {...}}
-rooms_lock = threading.Lock() # Lock para proteger o acesso a rooms_data
+rooms_data = {} 
+rooms_lock = threading.Lock()
 
 def generate_room_pin(length=5):
-    """ Gera um PIN alfanumérico único para a sala. """
+    logger.debug("generate_room_pin: Iniciando geração de PIN.")
     while True:
         pin = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
         with rooms_lock:
             if pin not in rooms_data:
+                logger.debug(f"generate_room_pin: PIN gerado e único: {pin}")
                 return pin
-
-def get_room_or_emit_error(room_pin, sid_to_emit_to=None):
-    """ Helper para buscar uma sala; emite erro se não encontrada. """
-    sid_to_emit_to = sid_to_emit_to or request.sid
-    with rooms_lock:
-        room = rooms_data.get(room_pin)
-    if not room:
-        logger.warning(f"Tentativa de acesso à sala inexistente: {room_pin} por SID {sid_to_emit_to}")
-        emit('room_error', {'message': f"Sala com PIN {room_pin} não encontrada."}, room=sid_to_emit_to)
-        return None
-    return room
 
 # --- Rotas HTTP ---
 @app.route('/')
 def index_page(): return render_template('index.html')
 
-@app.route('/lobby') # Nova rota para a tela de lobby/espera
+@app.route('/lobby') 
 def lobby_page(): return render_template('lobby.html')
 
 @app.route('/quiz')
@@ -94,19 +99,43 @@ def quiz_page(): return render_template('quiz.html')
 def results_page(): return render_template('results.html')
 
 # --- Funções Auxiliares do Quiz (Adaptadas para Salas) ---
+# ... (COLE AQUI AS FUNÇÕES: _reset_room_quiz_state, _get_current_question_for_room, 
+#      _advance_question_for_room, _question_timer_logic_for_room, 
+#      _start_question_timer_for_room, _calculate_recommendation_for_room, 
+#      _end_quiz_for_room, _start_quiz_logic DA VERSÃO ANTERIOR - flask_backend_v6_rooms)
+# --- Funções Auxiliares do Quiz (Adaptadas para Salas) ---
+def _start_quiz_logic(room_pin): 
+    room = rooms_data.get(room_pin)
+    if not room:
+        logger.error(f"_start_quiz_logic chamada para sala inexistente: {room_pin}")
+        return
+
+    logger.info(f"Sala {room_pin}: Dentro de _start_quiz_logic: Iniciando lógica do quiz.")
+    room["game_state"]["current_question_index"] = -1
+    room["game_state"]["quiz_active"] = True
+    room["game_state"]["question_start_time"] = None
+    if room["game_state"].get("question_timer_thread") and room["game_state"]["question_timer_thread"].is_alive():
+        logger.debug(f"Sala {room_pin}: _start_quiz_logic: Timer anterior ainda ativo (será ignorado).")
+    room["game_state"]["question_timer_thread"] = None
+    for p_data in room["players"].values(): 
+        p_data["score"] = 0
+        p_data["answers"] = {}
+        if "answered_current_question" in p_data:
+            del p_data["answered_current_question"]
+    
+    logger.info(f"Sala {room_pin}: _start_quiz_logic: Emitindo 'quiz_started'.")
+    socketio.emit('quiz_started', {"message": "O quiz vai começar!", "roomPin": room_pin}, room=room_pin)
+    _advance_question_for_room(room_pin)
+
+
 def _reset_room_quiz_state(room_pin):
-    # Chamada de dentro de um contexto com rooms_lock
     room = rooms_data.get(room_pin)
     if not room: return
 
     room["game_state"] = {
-        "current_question_index": -1,
-        "quiz_active": False,
-        "question_start_time": None,
-        "time_per_question": 20,
-        "question_timer_thread": None,
+        "current_question_index": -1, "quiz_active": False, "question_start_time": None,
+        "time_per_question": 20, "question_timer_thread": None,
     }
-    # Reseta scores e respostas dos jogadores da sala
     for player_sid in room["players"]:
         room["players"][player_sid]["score"] = 0
         room["players"][player_sid]["answers"] = {}
@@ -116,7 +145,6 @@ def _reset_room_quiz_state(room_pin):
 
 
 def _get_current_question_for_room(room_pin):
-    # Chamada de dentro de um contexto com rooms_lock
     room = rooms_data.get(room_pin)
     if not room or not room["game_state"]["quiz_active"]: return None
     idx = room["game_state"]["current_question_index"]
@@ -125,7 +153,6 @@ def _get_current_question_for_room(room_pin):
     return None
 
 def _advance_question_for_room(room_pin):
-    # Chamada de dentro de um contexto com rooms_lock
     room = rooms_data.get(room_pin)
     if not room or not room["game_state"]["quiz_active"]:
         logger.debug(f"Advance Q para sala {room_pin}: Quiz não ativo.")
@@ -138,7 +165,7 @@ def _advance_question_for_room(room_pin):
         current_q = new_quiz_questions[idx]
         logger.info(f"Sala {room_pin}: Avançando para P{idx + 1} - {current_q.text[:30]}...")
         room["game_state"]["question_start_time"] = time.time()
-        for player_sid in room["players"]: # Limpa flag de resposta
+        for player_sid in room["players"]: 
             if "answered_current_question" in room["players"][player_sid]:
                 del room["players"][player_sid]["answered_current_question"]
         
@@ -151,32 +178,36 @@ def _advance_question_for_room(room_pin):
         _end_quiz_for_room(room_pin)
 
 
-def _question_timer_logic_for_room(room_pin):
-    room = get_room_or_emit_error(room_pin) # Verifica se a sala ainda existe
-    if not room: 
-        logger.warning(f"[Timer Sala {room_pin}] Sala não existe mais. Timer encerrando.")
-        return
+def _question_timer_logic_for_room(room_pin_arg): # Renomeado para evitar conflito com a variável room_pin local
+    # Este timer roda em uma thread separada, precisa obter o lock ao acessar rooms_data
+    logger.debug(f"[Timer Sala {room_pin_arg}] Thread iniciada.")
+    with rooms_lock:
+        room = rooms_data.get(room_pin_arg) 
+        if not room: 
+            logger.warning(f"[Timer Sala {room_pin_arg}] Sala não existe mais no início da thread. Timer encerrando.")
+            return
+        question_index_at_start = room["game_state"]["current_question_index"]
+        time_to_wait = room["game_state"]["time_per_question"]
+    
+    logger.info(f"[Timer Sala {room_pin_arg} - Q{question_index_at_start + 1}] Esperando {time_to_wait}s.")
+    socketio.sleep(time_to_wait + 0.5) # Dá uma pequena margem
 
-    question_index_at_start = room["game_state"]["current_question_index"]
-    time_to_wait = room["game_state"]["time_per_question"]
-    logger.info(f"[Timer Sala {room_pin} - Q{question_index_at_start + 1}] Esperando {time_to_wait}s.")
-    socketio.sleep(time_to_wait + 0.5)
-
-    with rooms_lock: # Adquire lock para verificar/modificar estado da sala
-        room = rooms_data.get(room_pin) # Re-obtém a sala dentro do lock
+    with rooms_lock: 
+        room = rooms_data.get(room_pin_arg) # Re-obtém a sala dentro do lock
         if not room:
-            logger.warning(f"[Timer Sala {room_pin} - Q{question_index_at_start + 1}] Sala desapareceu. Timer encerrando.")
+            logger.warning(f"[Timer Sala {room_pin_arg} - Q{question_index_at_start + 1}] Sala desapareceu após sleep. Timer encerrando.")
             return
 
         gs = room["game_state"]
+        logger.debug(f"[Timer Sala {room_pin_arg} - Q{question_index_at_start + 1}] Acordou. Estado: quiz_active={gs['quiz_active']}, current_q_idx={gs['current_question_index']}, q_idx_start={question_index_at_start}")
         if gs["quiz_active"] and gs["current_question_index"] == question_index_at_start:
-            logger.info(f"[Timer Sala {room_pin} - Q{question_index_at_start + 1}] Tempo esgotado.")
-            current_q_obj = _get_current_question_for_room(room_pin) # Já está dentro do lock
+            logger.info(f"[Timer Sala {room_pin_arg} - Q{question_index_at_start + 1}] Tempo esgotado. Avançando.")
+            current_q_obj = _get_current_question_for_room(room_pin_arg) # Já está no lock
             if current_q_obj:
-                 socketio.emit('time_up', {'questionId': current_q_obj.id, 'roomPin': room_pin}, room=room_pin)
-            _advance_question_for_room(room_pin)
+                 socketio.emit('time_up', {'questionId': current_q_obj.id, 'roomPin': room_pin_arg}, room=room_pin_arg)
+            _advance_question_for_room(room_pin_arg)
         else:
-            logger.info(f"[Timer Sala {room_pin} - Q{question_index_at_start + 1}] Quiz inativo ou pergunta já avançou. Timer encerrando.")
+            logger.info(f"[Timer Sala {room_pin_arg} - Q{question_index_at_start + 1}] Condição não atendida para avançar. Timer encerrando sem ação.")
 
 
 def _start_question_timer_for_room(room_pin):
@@ -184,16 +215,20 @@ def _start_question_timer_for_room(room_pin):
     room = rooms_data.get(room_pin)
     if not room: return
 
+    # Cancela timer anterior se existir e estiver vivo (melhor prática)
     if room["game_state"].get("question_timer_thread") and room["game_state"]["question_timer_thread"].is_alive():
-        logger.warning(f"Sala {room_pin}: Timer já existe para Q{room['game_state']['current_question_index']+1}.")
-        return
+        logger.debug(f"Sala {room_pin}: Timer anterior para Q{room['game_state']['current_question_index']} ainda ativo. Tentando cancelar (não implementado diretamente, mas a lógica do timer deve impedir sobreposição).")
+        # Em eventlet, não há um método join() ou cancel() direto para greenlets de start_background_task
+        # A lógica dentro de _question_timer_logic_for_room deve garantir que timers antigos não interfiram.
+        # Apenas resetamos a referência para permitir um novo.
+        room["game_state"]["question_timer_thread"] = None 
     
     logger.info(f"Sala {room_pin}: Iniciando timer para Q{room['game_state']['current_question_index'] + 1}.")
     room["game_state"]["question_timer_thread"] = socketio.start_background_task(
-        target=_question_timer_logic_for_room, room_pin=room_pin
+        target=_question_timer_logic_for_room, room_pin_arg=room_pin 
     )
 
-def _calculate_recommendation_for_room(player_answers): # Mesma lógica de antes
+def _calculate_recommendation_for_room(player_answers):
     if not player_answers: return "Nenhuma resposta registrada."
     correct_skill_counts = defaultdict(int)
     for q_id, answer_data in player_answers.items():
@@ -202,11 +237,9 @@ def _calculate_recommendation_for_room(player_answers): # Mesma lógica de antes
             if skill: correct_skill_counts[skill] += 1
     if not correct_skill_counts: return "Nenhum acerto para sugerir área."
     best_skill_area = max(correct_skill_counts, key=correct_skill_counts.get)
-    # ... (resto da lógica de recomendação e course_suggestions como antes) ...
     course_suggestions = {
         "BICT - Lógica de Programação": "Engenharia de Computação, Ciência da Computação",
-        "BICT - Redes de Computadores": "Engenharia de Computação",
-        "BICT - Matemática Discreta": "Engenharia de Computação",
+        "BICT - Redes de Computadores": "Engenharia de Computação", "BICT - Matemática Discreta": "Engenharia de Computação",
         "Eng. Computação - Arquitetura de Computadores": "Engenharia de Computação",
         "Eng. Civil - Materiais de Construção": "Engenharia Civil",
         "Eng. Mecânica - Termodinâmica": "Engenharia Mecânica, Eng. Aeroespacial",
@@ -215,8 +248,7 @@ def _calculate_recommendation_for_room(player_answers): # Mesma lógica de antes
         "Eng. Transportes - Engenharia de Tráfego": "Engenharia de Transportes",
         "Cálculo Básico - Geometria": "Todas as Engenharias",
         "Física Aplicada - Termologia": "Eng. Mecânica, Eng. Materiais",
-        "BICT - Estatística Básica": "Todas as Engenharias",
-        "Conhecimentos Gerais": "Qualquer área!"
+        "BICT - Estatística Básica": "Todas as Engenharias", "Conhecimentos Gerais": "Qualquer área!"
     }
     suggestion_text = f"Você se destacou em '{best_skill_area}'. "
     suggestion_text += f"Cursos como {course_suggestions.get(best_skill_area, 'áreas relacionadas')} podem ser interessantes."
@@ -226,15 +258,17 @@ def _calculate_recommendation_for_room(player_answers): # Mesma lógica de antes
 
 
 def _end_quiz_for_room(room_pin):
-    # Chamada de dentro de um contexto com rooms_lock
+    # Não precisa de lock aqui se for chamada de um contexto que já tem o lock (como _advance_question_for_room)
+    # Mas se puder ser chamada de fora, precisaria do with rooms_lock:
     room = rooms_data.get(room_pin)
     if not room: return
 
-    if not room["game_state"]["quiz_active"] and room["game_state"]["current_question_index"] < TOTAL_QUESTIONS -1 :
-        logger.info(f"Sala {room_pin}: end_quiz chamada, mas quiz não estava ativo ou já terminou/resetou.")
-        # return # Não retorna para garantir que os resultados sejam enviados se o quiz foi interrompido.
+    gs = room["game_state"]
+    if not gs["quiz_active"] and gs["current_question_index"] < TOTAL_QUESTIONS -1 :
+         logger.info(f"Sala {room_pin}: _end_quiz_for_room chamada, mas quiz já inativo ou não completou. Estado: {gs}")
+         # return # Não retorna para permitir que o host veja resultados parciais se o quiz for interrompido
 
-    room["game_state"]["quiz_active"] = False
+    gs["quiz_active"] = False 
     logger.info(f"Sala {room_pin}: Quiz finalizado. Calculando resultados...")
     results = []
     for sid, player_data in room["players"].items():
@@ -244,15 +278,12 @@ def _end_quiz_for_room(room_pin):
     results.sort(key=lambda p: p["score"], reverse=True)
     socketio.emit('quiz_ended', {"results": results, "roomPin": room_pin}, room=room_pin)
     logger.info(f"Sala {room_pin}: Resultados enviados.")
-    # Não reseta a sala aqui, o host pode querer ver os resultados ou reiniciar.
-    # A sala será limpa se todos saírem ou após um tempo de inatividade (não implementado).
+
 
 # --- Eventos SocketIO ---
 @socketio.on('connect')
 def handle_connect():
-    logger.info(f"Cliente CONECTADO: SID {request.sid}")
-    # Jogador não entra em nenhuma sala específica ao conectar, apenas estabelece a conexão.
-    # Ele precisará enviar 'create_room' ou 'join_room_pin'.
+    logger.info(f"Cliente CONECTADO: SID {request.sid}, Headers: {dict(request.headers)}")
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -261,67 +292,61 @@ def handle_disconnect():
     with rooms_lock:
         room_pin_to_leave = None
         player_nickname_left = None
-        # Encontra a sala da qual o jogador está saindo
-        for pin, room_data in rooms_data.items():
+        for pin, room_data in list(rooms_data.items()): 
             if sid in room_data["players"]:
                 room_pin_to_leave = pin
                 player_nickname_left = room_data["players"][sid]["nickname"]
                 del room_data["players"][sid]
                 logger.info(f"Jogador '{player_nickname_left}' (SID: {sid}) removido da sala {pin}.")
-                break
-        
-        if room_pin_to_leave:
-            room = rooms_data.get(room_pin_to_leave) # Re-get room data
-            if room: # Se a sala ainda existe
-                # Notifica outros jogadores na sala
-                remaining_players_nicknames = [p["nickname"] for p in room["players"].values()]
+                
+                remaining_players_nicknames = [p["nickname"] for p in room_data["players"].values()]
                 socketio.emit('player_left', {
                     "nickname": player_nickname_left, "sid": sid,
                     "remainingPlayers": remaining_players_nicknames,
                     "roomPin": room_pin_to_leave
                 }, room=room_pin_to_leave)
 
-                # Se o host saiu, podemos designar um novo host ou encerrar a sala (lógica complexa, simplificar por agora)
-                if sid == room["host_sid"]:
+                if sid == room_data["host_sid"]:
                     logger.info(f"Host (SID: {sid}) da sala {room_pin_to_leave} desconectou.")
-                    if not room["players"]: # Se não há mais jogadores
+                    if not room_data["players"]:
                         logger.info(f"Sala {room_pin_to_leave} está vazia após saída do host. Removendo sala.")
                         del rooms_data[room_pin_to_leave]
                     else:
-                        # Poderia emitir uma mensagem de que o host saiu.
-                        # Por simplicidade, a sala continua mas sem host ativo para iniciar um novo quiz.
                         socketio.emit('host_left', {"roomPin": room_pin_to_leave, "message": "O líder da sala saiu."}, room=room_pin_to_leave)
-                        room["host_sid"] = None # Marca que não há host
-
-                elif not room["players"]: # Se não era o host, mas a sala ficou vazia
+                        room_data["host_sid"] = None 
+                elif not room_data["players"]:
                     logger.info(f"Sala {room_pin_to_leave} ficou vazia. Removendo sala.")
                     del rooms_data[room_pin_to_leave]
-
+                break 
 
 @socketio.on('create_room')
 def handle_create_room(data):
     sid = request.sid
     nickname = data.get('nickname', f'Host_{sid[:4]}').strip()[:25]
+    logger.info(f"handle_create_room: Recebido de SID {sid} para nickname {nickname}")
+    
+    room_pin = generate_room_pin() # Geração de PIN fora do lock principal
+    logger.info(f"handle_create_room: PIN gerado {room_pin}")
+
     with rooms_lock:
-        room_pin = generate_room_pin()
+        logger.debug(f"handle_create_room: Lock adquirido para sala {room_pin}")
         rooms_data[room_pin] = {
             "host_sid": sid,
             "players": {sid: {"nickname": nickname, "score": 0, "answers": {}}},
-            "game_state": { # Estado inicial do jogo para a nova sala
-                "current_question_index": -1,
-                "quiz_active": False,
-                "question_start_time": None,
-                "time_per_question": 20,
-                "question_timer_thread": None,
+            "game_state": {
+                "current_question_index": -1, "quiz_active": False, "question_start_time": None,
+                "time_per_question": 20, "question_timer_thread": None,
             }
         }
-        join_room(room_pin) # Host entra na sua própria sala SocketIO
-        session['current_room_pin'] = room_pin # Guarda na sessão do host
+        join_room(room_pin) 
+        session['current_room_pin'] = room_pin 
         session['is_host'] = True
-
-    logger.info(f"Sala {room_pin} criada pelo host '{nickname}' (SID: {sid}).")
+        logger.info(f"Sala {room_pin} criada e host '{nickname}' (SID: {sid}) adicionado.")
+    
+    logger.info(f"handle_create_room: Emitindo 'room_created' para SID {sid} para sala {room_pin}")
     emit('room_created', {"roomPin": room_pin, "nickname": nickname, "sid": sid, "isHost": True,
                            "players": [nickname]}, room=sid)
+    logger.info(f"handle_create_room: Evento 'room_created' emitido para sala {room_pin}.")
 
 
 @socketio.on('join_room_pin')
@@ -329,90 +354,74 @@ def handle_join_room_pin(data):
     sid = request.sid
     nickname = data.get('nickname', f'Jogador_{sid[:4]}').strip()[:25]
     room_pin = data.get('roomPin', '').upper()
+    logger.info(f"handle_join_room_pin: Recebido de SID {sid} para nickname {nickname}, sala {room_pin}")
 
     with rooms_lock:
+        logger.debug(f"handle_join_room_pin: Lock adquirido para sala {room_pin}")
         room = rooms_data.get(room_pin)
         if not room:
             logger.warning(f"Tentativa de join na sala {room_pin} por '{nickname}', mas sala não existe.")
             emit('room_join_error', {"message": f"Sala com PIN '{room_pin}' não encontrada."}, room=sid)
             return
         
-        if sid in room["players"]: # Jogador já está na sala (talvez reconectando ou bug)
-            room["players"][sid]["nickname"] = nickname # Atualiza nickname
-            logger.info(f"Jogador '{nickname}' (SID {sid}) já estava na sala {room_pin}. Nickname atualizado.")
-        else:
+        if sid not in room["players"]:
             room["players"][sid] = {"nickname": nickname, "score": 0, "answers": {}}
-            logger.info(f"Jogador '{nickname}' (SID {sid}) entrou na sala {room_pin}.")
-
-        join_room(room_pin) # Jogador entra na sala SocketIO
+        else: 
+            room["players"][sid]["nickname"] = nickname
+        
+        logger.info(f"Jogador '{nickname}' (SID {sid}) entrou/atualizou na sala {room_pin}.")
+        join_room(room_pin) 
         session['current_room_pin'] = room_pin
         session['is_host'] = (sid == room["host_sid"])
 
         current_players_nicknames = [p_data["nickname"] for p_data in room["players"].values()]
         
-        # Confirmação para quem entrou
+        logger.info(f"handle_join_room_pin: Emitindo 'room_joined' para SID {sid} para sala {room_pin}")
         emit('room_joined', {
             "roomPin": room_pin, "nickname": nickname, "sid": sid, 
             "isHost": session['is_host'], "players": current_players_nicknames,
-            "quizActive": room["game_state"]["quiz_active"] # Informa se o quiz já começou
+            "quizActive": room["game_state"]["quiz_active"] 
         }, room=sid)
         
-        # Notifica os outros na sala (incluindo o host)
+        logger.info(f"handle_join_room_pin: Emitindo 'player_joined_room' para sala {room_pin}")
         socketio.emit('player_joined_room', {
             "nickname": nickname, "sid": sid, "roomPin": room_pin,
             "players": current_players_nicknames
         }, room=room_pin, include_self=False)
 
-        # Se o quiz já estiver ativo na sala, envia a pergunta atual para o jogador que acabou de entrar
         if room["game_state"]["quiz_active"]:
-            current_q = _get_current_question_for_room(room_pin) # Já está no lock
+            logger.info(f"handle_join_room_pin: Quiz já ativo na sala {room_pin}. Enviando pergunta atual para {nickname}.")
+            current_q = _get_current_question_for_room(room_pin) 
             if current_q:
                 q_idx = room["game_state"]["current_question_index"]
                 payload = {"question": current_q.to_dict(), "questionNumber": q_idx + 1,
                            "totalQuestions": TOTAL_QUESTIONS, "timeLimit": room["game_state"]["time_per_question"]}
-                emit('new_question', payload, room=sid) # Envia só para quem entrou
+                emit('new_question', payload, room=sid)
+        logger.debug(f"handle_join_room_pin: Lock liberado para sala {room_pin}")
 
 
 @socketio.on('start_quiz_for_room')
 def handle_start_quiz_for_room(data):
     sid = request.sid
     room_pin = data.get('roomPin', '').upper()
+    logger.info(f"handle_start_quiz_for_room: Recebido de SID {sid} para sala {room_pin}")
     
     with rooms_lock:
+        logger.debug(f"handle_start_quiz_for_room: Lock adquirido para sala {room_pin}")
         room = rooms_data.get(room_pin)
         if not room:
-            emit('room_error', {"message": "Sala não encontrada."}, room=sid)
-            return
+            emit('room_error', {"message": "Sala não encontrada."}, room=sid); return
         if room["host_sid"] != sid:
-            emit('room_error', {"message": "Apenas o líder da sala pode iniciar o quiz."}, room=sid)
-            return
+            emit('room_error', {"message": "Apenas o líder pode iniciar."}, room=sid); return
         if room["game_state"]["quiz_active"]:
-            emit('room_error', {"message": "O quiz nesta sala já está em andamento."}, room=sid)
-            return
-        if not room["players"]:
-            emit('room_error', {"message": "Não há jogadores na sala para iniciar."}, room=sid)
-            return
+            emit('room_error', {"message": "Quiz já em andamento."}, room=sid); return
+        if not room["players"]: # Verifica se há jogadores
+            emit('room_error', {"message": "Não há jogadores na sala para iniciar."}, room=sid); return
 
         logger.info(f"Host {sid} iniciando quiz para sala {room_pin}.")
-        _reset_room_quiz_state(room_pin) # Garante que o estado do quiz da sala está limpo
-        # A função _start_quiz_logic será chamada dentro de _reset_room_quiz_state ou similar
-        # Vamos chamar diretamente _start_quiz_logic que já faz o necessário
-        # _start_quiz_logic já está definida para ser chamada com lock
-        room["game_state"]["current_question_index"] = -1
-        room["game_state"]["quiz_active"] = True
-        room["game_state"]["question_start_time"] = None
-        if room["game_state"]["question_timer_thread"] and room["game_state"]["question_timer_thread"].is_alive():
-            pass 
-        room["game_state"]["question_timer_thread"] = None
-        for p_data in room["players"].values(): 
-            p_data["score"] = 0
-            p_data["answers"] = {}
-            if "answered_current_question" in p_data:
-                del p_data["answered_current_question"]
-        
-        logger.info(f"_start_quiz_logic para sala {room_pin}: Emitindo 'quiz_started'.")
-        socketio.emit('quiz_started', {"message": "O quiz vai começar!", "roomPin": room_pin}, room=room_pin)
-        _advance_question_for_room(room_pin)
+        _reset_room_quiz_state(room_pin) 
+        _start_quiz_logic(room_pin) 
+        logger.debug(f"handle_start_quiz_for_room: Lock liberado para sala {room_pin}")
 
 
 @socketio.on('submit_answer')
@@ -421,42 +430,34 @@ def handle_submit_answer(data):
     room_pin = data.get('roomPin', '').upper()
     question_id = data.get('questionId')
     selected_option_id = data.get('selectedOptionId')
+    logger.info(f"handle_submit_answer: Recebido de SID {sid} para sala {room_pin}, QID {question_id}")
 
     with rooms_lock:
+        logger.debug(f"handle_submit_answer: Lock adquirido para sala {room_pin}")
         room = rooms_data.get(room_pin)
         if not room or sid not in room["players"]:
-            logger.warning(f"Resposta de {sid} para sala {room_pin} ignorada: sala/jogador desconhecido.")
-            emit('answer_ack', {"success": False, "error": "Sala ou jogador não reconhecido."}, room=sid)
-            return
+            emit('answer_ack', {"success": False, "error": "Sala/jogador não reconhecido."}, room=sid); return
         
         gs = room["game_state"]
         player = room["players"][sid]
 
         if not gs["quiz_active"]:
-            logger.warning(f"Resposta de {player['nickname']} para sala {room_pin} ignorada: quiz inativo.")
-            emit('answer_ack', {"success": False, "error": "O quiz nesta sala não está ativo."}, room=sid)
-            return
+            emit('answer_ack', {"success": False, "error": "Quiz não está ativo."}, room=sid); return
         
-        current_q = _get_current_question_for_room(room_pin) # Já está no lock
+        current_q = _get_current_question_for_room(room_pin)
 
         if not current_q or current_q.id != question_id:
-            logger.warning(f"Resposta de {player['nickname']} para QID {question_id} na sala {room_pin}, mas Q atual é {current_q.id if current_q else 'N/A'}.")
-            emit('answer_ack', {"success": False, "error": "Resposta para pergunta incorreta ou antiga."}, room=sid)
-            return
+            emit('answer_ack', {"success": False, "error": "Resposta para pergunta errada."}, room=sid); return
         if player.get("answered_current_question"):
-            logger.warning(f"{player['nickname']} já respondeu à pergunta {question_id} na sala {room_pin}.")
-            emit('answer_ack', {"success": False, "error": "Você já respondeu a esta pergunta."}, room=sid)
-            return
+            emit('answer_ack', {"success": False, "error": "Você já respondeu."}, room=sid); return
 
         is_correct = (selected_option_id == current_q.correct_option_id)
         points_earned = 0
         if is_correct:
-            base_points = 100
-            time_taken = time.time() - gs.get("question_start_time", time.time())
+            base_points = 100; time_taken = time.time() - gs.get("question_start_time", time.time()) 
             time_limit = gs["time_per_question"]
             bonus_percentage = max(0, (time_limit - time_taken) / time_limit if time_limit > 0 else 0)
-            max_bonus_points = 50
-            bonus_points = int(max_bonus_points * bonus_percentage)
+            max_bonus_points = 50; bonus_points = int(max_bonus_points * bonus_percentage)
             points_earned = base_points + bonus_points
             player["score"] += points_earned
         
@@ -465,7 +466,7 @@ def handle_submit_answer(data):
             "skill": current_q.skill_area, "points_earned": points_earned
         }
         player["answered_current_question"] = True
-        logger.info(f"Sala {room_pin}: '{player['nickname']}' respondeu Q'{current_q.id}': {'Correto' if is_correct else 'Errado'}. Pts: {points_earned}. Total: {player['score']}")
+        logger.info(f"Sala {room_pin}: '{player['nickname']}' Q'{current_q.id}': {'Ok' if is_correct else 'X'}. Pts:{points_earned}. Total:{player['score']}")
         
         emit('answer_feedback', {
             "questionId": current_q.id, "selectedOptionId": selected_option_id,
@@ -483,10 +484,15 @@ def handle_submit_answer(data):
         if all_answered and len(room["players"]) > 0 :
             logger.info(f"Sala {room_pin}: Todos os {len(room['players'])} jogadores responderam. Avançando...")
             _advance_question_for_room(room_pin)
+        logger.debug(f"handle_submit_answer: Lock liberado para sala {room_pin}")
 
 
 # --- Inicialização ---
 if __name__ == '__main__':
-    logger.info("Iniciando servidor Flask-SocketIO para Quiz Vocacional com Salas...")
+    logger.info(f"--- Iniciando servidor Flask-SocketIO (PID: {os.getpid()}) ---")
+    logger.info(f"--- Usando async_mode: {socketio.async_mode} ---")
+    # Se estiver usando eventlet, socketio.run() já usa o servidor eventlet.
+    # O debug=True do Flask pode causar problemas com eventlet em alguns casos (reinicializações duplas).
+    # Para produção, debug=False e use um servidor WSGI como `gunicorn --worker-class eventlet -w 1 app:app`
     socketio.run(app, debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5001))
 
