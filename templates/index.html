@@ -18,20 +18,28 @@
         <main>
             <div class="mb-6">
                 <label for="nickname" class="block text-sm font-medium text-slate-300 mb-1 text-left">Seu Apelido:</label>
-                <input type="text" id="nickname" name="nickname" placeholder="Ex: SuperDev"
+                <input type="text" id="nickname" name="nickname" placeholder="Ex: LiderDoQuiz"
                        class="w-full px-4 py-3 rounded-lg bg-slate-700 border-2 border-slate-600 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/50 text-slate-100 placeholder-slate-400 outline-none transition-all duration-300">
             </div>
 
-            <button id="joinQuizBtn"
-                    class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out mb-4">
-                Entrar no Quiz
+            <button id="createRoomBtn"
+                    class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out mb-4">
+                Criar Nova Sala de Quiz
             </button>
 
-            <button id="startQuizBtn"
-                    class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out hidden">
-                Iniciar Quiz Agora!
+            <hr class="border-slate-700 my-6">
+
+            <div class="mb-4">
+                <label for="roomPinInput" class="block text-sm font-medium text-slate-300 mb-1 text-left">PIN da Sala (para entrar):</label>
+                <input type="text" id="roomPinInput" name="roomPinInput" placeholder="Digite o PIN" maxlength="5"
+                       class="w-full px-4 py-3 rounded-lg bg-slate-700 border-2 border-slate-600 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/50 text-slate-100 placeholder-slate-400 outline-none transition-all duration-300 uppercase text-center tracking-widest">
+            </div>
+            <button id="joinRoomBtn"
+                    class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out">
+                Entrar na Sala com PIN
             </button>
-            <p id="statusMessage" class="mt-4 text-sm text-sky-300 min-h-[20px]"></p>
+            
+            <p id="statusMessage" class="mt-6 text-sm text-sky-300 min-h-[20px]"></p>
         </main>
 
         <footer class="mt-8">
