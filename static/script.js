@@ -16,7 +16,7 @@ let currentRoomData = {
 let questionTimerInterval = null;
 let selectedOptionId = null;
 
-// --- Seletores de Elementos (agrupados por página) ---
+// --- Seletores de Elementos ---
 function getIndexPageElements() {
     return {
         nicknameInput: document.getElementById('nickname'),
@@ -47,12 +47,12 @@ function getQuizPageElements() {
         scoreDisplay: document.getElementById('scoreDisplay'),
         questionNumberDisplay: document.getElementById('questionNumber'),
         totalQuestionsDisplay: document.getElementById('totalQuestions'),
-        activePlayersDisplay: document.getElementById('activePlayers'), // Para a lista de jogadores no quiz
+        activePlayersDisplay: document.getElementById('activePlayers'),
         timerDisplay: document.getElementById('timerDisplay'),
         questionText: document.getElementById('questionText'),
         optionsContainer: document.getElementById('optionsContainer'),
         feedbackText: document.getElementById('feedbackText'),
-        waitingScreen: document.getElementById('waitingScreen'), // Reutilizado
+        waitingScreen: document.getElementById('waitingScreen'),
         waitingTitle: document.getElementById('waitingTitle'),
         waitingMessage: document.getElementById('waitingMessage'),
     };
@@ -68,12 +68,14 @@ function getResultsPageElements() {
     };
 }
 
-
 // --- Conexão Socket.IO e Lógica Geral ---
 function connectSocket() {
     if (!socket || !socket.connected) {
         console.log('Tentando conectar ao servidor Socket.IO...');
-        socket = io();
+        socket = io({
+            reconnectionAttempts: 5, // Tenta reconectar 5 vezes
+            reconnectionDelay: 2000  // Espera 2s entre tentativas
+        });
         setupSocketListeners();
     } else {
         console.log('Socket já conectado ou em processo de conexão.');
@@ -85,38 +87,47 @@ function setupSocketListeners() {
 
     socket.on('connect', () => {
         console.log('Socket.IO: Conectado! SID:', socket.id);
-        currentRoomData.mySid = socket.id;
-        // Tenta recuperar estado da sala se já estava em uma (ex: refresh)
+        const oldSid = currentRoomData.mySid;
+        currentRoomData.mySid = socket.id; 
+        
+        const path = window.location.pathname;
         const storedRoomPin = sessionStorage.getItem('currentRoomPin');
         const storedNickname = localStorage.getItem('quizNickname');
-        if (storedRoomPin && storedNickname) {
-            console.log(`Recuperando sala ${storedRoomPin} para ${storedNickname} após conexão.`);
-            // Tenta re-entrar na sala. O backend deve lidar com isso graciosamente.
-            // O evento 'join_room_pin' é mais apropriado para isso.
-            // Se estiver na página de lobby ou quiz, o setup da página tentará re-entrar.
+
+        if (storedRoomPin && storedNickname && (path.includes('/lobby') || path.includes('/quiz') || path.includes('/results'))) {
+            console.log(`Socket.IO: Conectado/Reconectado (SID: ${socket.id}). Enviando 'rejoin_room_check' para sala ${storedRoomPin} como ${storedNickname}.`);
+            socket.emit('rejoin_room_check', { 
+                roomPin: storedRoomPin, 
+                nickname: storedNickname,
+            });
+        } else {
+            const indexUI = getIndexPageElements();
+            if(indexUI.statusMessage && (path === '/' || path.endsWith('index.html'))) {
+                 indexUI.statusMessage.textContent = 'Conectado ao servidor!';
+            }
         }
     });
 
     socket.on('disconnect', (reason) => {
         console.warn('Socket.IO: Desconectado:', reason);
-        const ui = getQuizPageElements(); // Tenta pegar elementos do quiz
-        if (ui.quizArea && window.location.pathname.includes('/quiz')) {
-            showWaitingScreen("Conexão perdida", "Tentando reconectar...", ui);
-        } else if (getLobbyPageElements().roomPinDisplay && window.location.pathname.includes('/lobby')) {
-             const lobbyUI = getLobbyPageElements();
-             if(lobbyUI.lobbyStatusMessage) lobbyUI.lobbyStatusMessage.textContent = "Desconectado. Verifique sua conexão.";
-        } else {
-            const indexUI = getIndexPageElements();
-            if(indexUI.statusMessage) indexUI.statusMessage.textContent = "Desconectado.";
+        const uiQuiz = getQuizPageElements(); 
+        const uiLobby = getLobbyPageElements();
+        const uiIndex = getIndexPageElements();
+
+        if (uiQuiz.quizArea && window.location.pathname.includes('/quiz')) {
+            showWaitingScreen("Conexão perdida", `Motivo: ${reason}. Tentando reconectar...`, uiQuiz);
+        } else if (uiLobby.roomPinDisplay && window.location.pathname.includes('/lobby')) {
+             if(uiLobby.lobbyStatusMessage) uiLobby.lobbyStatusMessage.textContent = "Desconectado: " + reason;
+        } else if (uiIndex.statusMessage) {
+            uiIndex.statusMessage.textContent = "Desconectado: " + reason;
         }
     });
 
     socket.on('connect_error', (err) => {
         console.error('Socket.IO: Erro de conexão:', err);
-        // Lógica similar ao disconnect para exibir erro na UI correta
+        // Adicionar feedback visual para o usuário
     });
 
-    // --- Listeners específicos das Salas ---
     socket.on('room_created', (data) => {
         console.log('Socket.IO: Evento "room_created":', data);
         if (data.roomPin) {
@@ -125,8 +136,8 @@ function setupSocketListeners() {
             currentRoomData.isHost = data.isHost;
             currentRoomData.players = data.players || [data.nickname];
             sessionStorage.setItem('currentRoomPin', data.roomPin);
-            sessionStorage.setItem('isHost', data.isHost);
-            localStorage.setItem('quizNickname', data.nickname); // Salva para persistência
+            sessionStorage.setItem('isHost', data.isHost.toString()); 
+            localStorage.setItem('quizNickname', data.nickname); 
             console.log(`Redirecionando para /lobby para a sala ${data.roomPin}`);
             window.location.href = '/lobby';
         } else {
@@ -136,38 +147,42 @@ function setupSocketListeners() {
     });
 
     socket.on('room_joined', (data) => {
-        console.log('Socket.IO: Evento "room_joined":', data);
+        console.log('Socket.IO: Evento "room_joined" (confirmação para mim):', data);
         currentRoomData.roomPin = data.roomPin;
-        currentRoomData.myNickname = data.nickname; // Nickname confirmado pelo backend
+        currentRoomData.myNickname = data.nickname; 
         currentRoomData.isHost = data.isHost;
-        currentRoomData.players = data.players || [];
+        currentRoomData.players = data.players || []; 
         sessionStorage.setItem('currentRoomPin', data.roomPin);
-        sessionStorage.setItem('isHost', data.isHost);
-        localStorage.setItem('quizNickname', data.nickname);
+        sessionStorage.setItem('isHost', data.isHost.toString());
+        localStorage.setItem('quizNickname', data.nickname); 
 
-        if (window.location.pathname.includes('/index') || window.location.pathname === '/') {
+        const path = window.location.pathname;
+        if (path.includes('/index') || path === '/') {
             console.log(`Redirecionando para /lobby para a sala ${data.roomPin} após join.`);
             window.location.href = '/lobby';
-        } else if (window.location.pathname.includes('/lobby')) {
+        } else if (path.includes('/lobby')) {
             console.log("Atualizando lobby após 'room_joined'.");
-            updateLobbyUI(); // Atualiza a UI do lobby se já estiver lá
+            updateLobbyUI(); 
+            if(data.quizActive && !currentRoomData.isHost){ 
+                console.log("Quiz já ativo na sala, e não sou host. Redirecionando do lobby para /quiz");
+                window.location.href = '/quiz';
+            }
+        } else if (path.includes('/quiz')) {
+            console.log("Recebido 'room_joined' na página do quiz. Atualizando dados.");
+            updatePlayerListQuiz(getQuizPageElements());
+            // Se o quiz estiver ativo, o backend enviará 'new_question' ou 'quiz_state_on_connect'
         }
-        if(data.quizActive && !currentRoomData.isHost){ // Se entrei numa sala com quiz ativo
-            console.log("Quiz já ativo na sala, redirecionando para /quiz");
-            window.location.href = '/quiz';
-        }
-
     });
     
-    socket.on('player_joined_room', (data) => { // Alguém (outro jogador) entrou na sala
-        console.log('Socket.IO: Evento "player_joined_room":', data);
+    socket.on('player_joined_room', (data) => { 
+        console.log('Socket.IO: Evento "player_joined_room" (outro jogador entrou):', data);
         if (currentRoomData.roomPin === data.roomPin) {
             currentRoomData.players = data.players || [];
             if (window.location.pathname.includes('/lobby')) {
                 updateLobbyUI();
             } else if (window.location.pathname.includes('/quiz')) {
                 const quizUI = getQuizPageElements();
-                updatePlayerListQuiz(quizUI); // Atualiza lista de jogadores na tela do quiz
+                updatePlayerListQuiz(quizUI); 
             }
         }
     });
@@ -188,35 +203,51 @@ function setupSocketListeners() {
     socket.on('host_left', (data) => {
         console.log('Socket.IO: Evento "host_left":', data);
         if (currentRoomData.roomPin === data.roomPin) {
-            currentRoomData.isHost = false; // O host original saiu
+            currentRoomData.isHost = false; 
             sessionStorage.setItem('isHost', 'false');
             const lobbyUI = getLobbyPageElements();
             if (lobbyUI.lobbyStatusMessage) {
                 lobbyUI.lobbyStatusMessage.textContent = "O líder da sala saiu. O quiz não pode ser iniciado.";
             }
             if (lobbyUI.hostControls) lobbyUI.hostControls.classList.add('hidden');
-            if (lobbyUI.playerWaitingMessage) lobbyUI.playerWaitingMessage.textContent = "O líder saiu. Aguardando um novo líder ou ação.";
+            if (lobbyUI.playerWaitingMessage) lobbyUI.playerWaitingMessage.textContent = "O líder saiu.";
         }
     });
 
     socket.on('room_error', (data) => {
         console.error('Socket.IO: Erro de Sala:', data.message);
         const path = window.location.pathname;
-        if (path.includes('/lobby')) {
-            const ui = getLobbyPageElements();
-            if(ui.lobbyStatusMessage) ui.lobbyStatusMessage.textContent = `Erro: ${data.message}`;
-        } else {
-            const ui = getIndexPageElements();
-            if(ui.statusMessage) ui.statusMessage.textContent = `Erro: ${data.message}`;
+        const lobbyUI = getLobbyPageElements();
+        const indexUI = getIndexPageElements();
+
+        if (path.includes('/lobby') && lobbyUI.lobbyStatusMessage) {
+            lobbyUI.lobbyStatusMessage.textContent = `Erro: ${data.message}`;
+        } else if (indexUI.statusMessage) {
+            indexUI.statusMessage.textContent = `Erro: ${data.message}`;
+            if(indexUI.joinRoomBtn) indexUI.joinRoomBtn.disabled = false; // Reabilita botão de entrar
+            if(indexUI.createRoomBtn) indexUI.createRoomBtn.disabled = false; // Reabilita botão de criar
         }
     });
 
-    // --- Listeners do Quiz (adaptados para salas) ---
+    socket.on('room_not_found_on_rejoin', (data) => {
+        console.warn(`Socket.IO: Evento 'room_not_found_on_rejoin' para sala ${data.roomPin}. Mensagem: ${data.message}`);
+        alert(`A sala ${data.roomPin} não existe mais ou foi encerrada. Você será redirecionado para a página inicial.`);
+        sessionStorage.removeItem('currentRoomPin');
+        sessionStorage.removeItem('isHost');
+        sessionStorage.removeItem('lastRoomPinForResults'); 
+        
+        const path = window.location.pathname;
+        if (path.includes('/lobby') || path.includes('/quiz') || path.includes('/results')) { 
+            window.location.href = '/';
+        }
+    });
+
+
     socket.on('quiz_started', (data) => {
         console.log('Socket.IO: Evento "quiz_started":', data);
         if (currentRoomData.roomPin === data.roomPin) {
             currentRoomData.quizActive = true;
-            currentRoomData.currentScore = 0; // Reseta score no início do quiz
+            currentRoomData.currentScore = 0; 
             if (window.location.pathname.includes('/lobby')) {
                 console.log("Quiz iniciado, redirecionando do lobby para /quiz");
                 window.location.href = '/quiz';
@@ -230,9 +261,11 @@ function setupSocketListeners() {
 
     socket.on('new_question', (data) => {
         console.log('Socket.IO: Evento "new_question":', data);
-        // Não precisa verificar roomPin aqui, pois o backend emite para a sala correta
         const ui = getQuizPageElements();
-        if (!ui.quizArea) return; 
+        if (!ui.quizArea) {
+            console.warn("new_question recebido, mas não na página do quiz. Ignorando.");
+            return;
+        }
         hideWaitingScreen(ui);
         selectedOptionId = null;
         currentRoomData.currentQuestion = data.question;
@@ -244,6 +277,7 @@ function setupSocketListeners() {
     });
 
     socket.on('answer_feedback', (data) => {
+        // ... (mesma lógica de antes)
         console.log('Socket.IO: Evento "answer_feedback":', data);
         const ui = getQuizPageElements();
         if (!ui.quizArea) return;
@@ -253,7 +287,7 @@ function setupSocketListeners() {
         const buttons = ui.optionsContainer.querySelectorAll('button.quiz-option-button');
         buttons.forEach(button => {
             button.disabled = true;
-            button.classList.remove('correct', 'incorrect', 'selected'); // Limpa classes de estado
+            button.classList.remove('correct', 'incorrect', 'selected'); 
             if (button.dataset.optionId === data.correctOptionId) button.classList.add('correct');
             if (button.dataset.optionId === data.selectedOptionId && !data.isCorrect) button.classList.add('incorrect');
         });
@@ -261,13 +295,12 @@ function setupSocketListeners() {
         if(ui.feedbackText) ui.feedbackText.className = `font-medium ${data.isCorrect ? 'text-emerald-400' : 'text-red-400'}`;
     });
     
-    socket.on('scores_update', (data) => { // Recebe scores de todos na sala
+    socket.on('scores_update', (data) => { 
         console.log('Socket.IO: Evento "scores_update":', data);
-        // Poderia ser usado para um ranking em tempo real na tela do quiz, se desejado.
-        // Por enquanto, a lista de jogadores é atualizada por 'player_joined_room' e 'player_left'.
     });
 
     socket.on('time_up', (data) => {
+        // ... (mesma lógica de antes)
         console.log('Socket.IO: Evento "time_up" para questão:', data.questionId);
         const ui = getQuizPageElements();
         if (!ui.quizArea) return;
@@ -287,12 +320,13 @@ function setupSocketListeners() {
     });
 
     socket.on('quiz_ended', (data) => {
+        // ... (mesma lógica de antes)
         console.log('Socket.IO: Evento "quiz_ended":', data);
         if (currentRoomData.roomPin === data.roomPin) {
             sessionStorage.setItem('quizResults_room_' + data.roomPin, JSON.stringify(data.results));
             sessionStorage.setItem('myNickname', currentRoomData.myNickname);
             sessionStorage.setItem('mySid', currentRoomData.mySid);
-            sessionStorage.setItem('lastRoomPinForResults', data.roomPin); // Para saber qual resultado carregar
+            sessionStorage.setItem('lastRoomPinForResults', data.roomPin); 
 
             if (window.location.pathname.includes('/quiz') || window.location.pathname.includes('/lobby')) {
                 const ui = getQuizPageElements() || getLobbyPageElements();
@@ -301,15 +335,15 @@ function setupSocketListeners() {
                     window.location.href = '/results';
                 }, 1500);
             } else if (window.location.pathname.includes('/results')) {
-                populateResultsPage(); // Se já estiver na página, apenas atualiza
+                populateResultsPage(); 
             }
         }
     });
 }
 
-
 // --- Lógica da Página Inicial (index.html) ---
 function setupIndexPage() {
+    // ... (mesma lógica de antes)
     const ui = getIndexPageElements();
     if (!ui.createRoomBtn || !ui.nicknameInput || !ui.joinRoomBtn || !ui.roomPinInput || !ui.statusMessage) {
         console.error("IndexPage: Elementos essenciais não encontrados.");
@@ -326,12 +360,15 @@ function setupIndexPage() {
         const nick = ui.nicknameInput.value.trim();
         if (!nick) { ui.statusMessage.textContent = 'Por favor, insira um apelido para criar a sala.'; return; }
         if (socket && socket.connected) {
-            localStorage.setItem('quizNickname', nick);
+            localStorage.setItem('quizNickname', nick); 
+            currentRoomData.myNickname = nick; 
+            console.log(`IndexPage: Emitindo 'create_room' com nickname: ${nick}`);
             socket.emit('create_room', { nickname: nick });
             ui.statusMessage.textContent = 'Criando sala...';
         } else {
             ui.statusMessage.textContent = 'Não conectado. Tentando conectar...';
-            connectSocket();
+            console.warn("IndexPage: createRoom - Socket não conectado. Tentando conectar...");
+            connectSocket(); 
         }
     });
 
@@ -343,10 +380,13 @@ function setupIndexPage() {
         if (!pin) { ui.statusMessage.textContent = 'Insira o PIN da sala.'; return; }
         if (socket && socket.connected) {
             localStorage.setItem('quizNickname', nick);
+            currentRoomData.myNickname = nick; 
+            console.log(`IndexPage: Emitindo 'join_room_pin' com nickname: ${nick}, PIN: ${pin}`);
             socket.emit('join_room_pin', { nickname: nick, roomPin: pin });
             ui.statusMessage.textContent = `Entrando na sala ${pin}...`;
         } else {
             ui.statusMessage.textContent = 'Não conectado. Tentando conectar...';
+            console.warn("IndexPage: joinRoomBtn - Socket não conectado. Tentando conectar...");
             connectSocket();
         }
     });
@@ -354,25 +394,29 @@ function setupIndexPage() {
 
 // --- Lógica da Página de Lobby (lobby.html) ---
 function setupLobbyPage() {
+    // ... (mesma lógica de antes, com logs adicionados)
     const ui = getLobbyPageElements();
     if (!ui.roomPinDisplay || !ui.playerListLobby) {
         console.error("LobbyPage: Elementos essenciais não encontrados.");
-        // Tenta redirecionar para home se não tiver dados da sala
-        if (!sessionStorage.getItem('currentRoomPin')) window.location.href = '/';
+        if (!sessionStorage.getItem('currentRoomPin')) {
+            console.warn("LobbyPage: Sem PIN no sessionStorage, redirecionando para home.");
+            window.location.href = '/';
+        }
         return;
     }
     console.log("LobbyPage: Configurando...");
-    connectSocket(); // Garante conexão
+    connectSocket(); 
 
     currentRoomData.roomPin = sessionStorage.getItem('currentRoomPin');
     currentRoomData.isHost = sessionStorage.getItem('isHost') === 'true';
-    currentRoomData.myNickname = localStorage.getItem('quizNickname') || 'Jogador';
+    currentRoomData.myNickname = localStorage.getItem('quizNickname') || 'Jogador Lobby';
 
     if (!currentRoomData.roomPin) {
-        console.warn("LobbyPage: Sem PIN de sala no sessionStorage. Redirecionando para home.");
+        console.warn("LobbyPage: Sem PIN de sala no sessionStorage após tentativa de recuperação. Redirecionando para home.");
         window.location.href = '/';
         return;
     }
+    console.log(`LobbyPage: Recuperado do sessionStorage - PIN: ${currentRoomData.roomPin}, É host? ${currentRoomData.isHost}, Nickname: ${currentRoomData.myNickname}`);
 
     ui.roomPinDisplay.textContent = currentRoomData.roomPin;
     if (ui.copyPinBtn) {
@@ -384,49 +428,59 @@ function setupLobbyPage() {
         };
     }
 
-
     if (currentRoomData.isHost) {
+        console.log("LobbyPage: Usuário é o HOST. Mostrando controles do host.");
         if(ui.hostControls) ui.hostControls.classList.remove('hidden');
         if(ui.playerWaitingMessage) ui.playerWaitingMessage.classList.add('hidden');
         if(ui.startQuizForRoomBtn) {
             ui.startQuizForRoomBtn.addEventListener('click', () => {
-                if (socket && socket.connected && currentRoomData.roomPin) {
-                    console.log(`LobbyPage: Host iniciando quiz para sala ${currentRoomData.roomPin}`);
-                    socket.emit('start_quiz_for_room', { roomPin: currentRoomData.roomPin });
+                const pinToStart = currentRoomData.roomPin || sessionStorage.getItem('currentRoomPin'); 
+                console.log(`LobbyPage: Botão 'Iniciar Quiz para Sala' clicado. PIN a ser usado: ${pinToStart}`);
+                
+                if (!pinToStart) {
+                    console.error("LobbyPage: ERRO CRÍTICO - roomPin é nulo ou indefinido ao tentar iniciar o quiz!");
+                    if(ui.lobbyStatusMessage) ui.lobbyStatusMessage.textContent = "Erro: PIN da sala não definido. Tente recriar a sala.";
+                    return;
+                }
+
+                if (socket && socket.connected) {
+                    console.log(`LobbyPage: Emitindo 'start_quiz_for_room' para sala ${pinToStart}`);
+                    socket.emit('start_quiz_for_room', { roomPin: pinToStart });
                     if(ui.lobbyStatusMessage) ui.lobbyStatusMessage.textContent = "Iniciando quiz...";
                 } else {
                      if(ui.lobbyStatusMessage) ui.lobbyStatusMessage.textContent = "Não conectado para iniciar.";
+                     console.warn("LobbyPage: startQuizForRoomBtn - Socket não conectado.");
                 }
             });
+        } else {
+            console.error("LobbyPage: Botão startQuizForRoomBtn NÃO encontrado no DOM!");
         }
     } else {
+        console.log("LobbyPage: Usuário NÃO é o host. Escondendo controles do host.");
         if(ui.hostControls) ui.hostControls.classList.add('hidden');
         if(ui.playerWaitingMessage) ui.playerWaitingMessage.classList.remove('hidden');
     }
-    // Solicita a lista de jogadores atual ao entrar no lobby ou se reconectar
-    // O backend já envia 'player_joined_room' ou 'room_joined' com a lista.
-    // Se precisar forçar um update, poderia emitir um evento 'get_room_details'
-    // e o backend responderia com os jogadores. Por ora, confiamos nos eventos existentes.
-    // Se currentRoomData.players estiver vazio, tentamos pegar do session storage (menos ideal)
-    // ou esperamos o primeiro 'player_joined_room'.
-    updateLobbyUI();
+    updateLobbyUI(); 
 }
 
+// --- Restante do script.js (updateLobbyUI, setupQuizPage, etc.) ---
+// ... (COPIE E COLE O RESTANTE DAS FUNÇÕES DA VERSÃO js_script_v8_rejoin_fix AQUI)
 function updateLobbyUI() {
     const ui = getLobbyPageElements();
-    if (!ui.playerListLobby || !ui.playerCount) return;
+    if (!ui.playerListLobby || !ui.playerCount) {
+        console.warn("updateLobbyUI: Elementos da lista de jogadores não encontrados.");
+        return;
+    }
+    console.log("updateLobbyUI: Atualizando lista de jogadores no lobby:", currentRoomData.players);
 
-    ui.playerListLobby.innerHTML = ''; // Limpa lista
+    ui.playerListLobby.innerHTML = ''; 
     if (currentRoomData.players && currentRoomData.players.length > 0) {
         currentRoomData.players.forEach(nick => {
             const li = document.createElement('li');
-            li.className = 'p-2 bg-slate-600/50 rounded text-slate-200';
+            li.className = 'p-2 bg-slate-600/50 rounded text-slate-200 text-sm'; 
             li.textContent = nick;
             if (nick === currentRoomData.myNickname) {
                 li.innerHTML += ' <span class="text-xs text-sky-400">(Você)</span>';
-            }
-            if (currentRoomData.isHost && nick === currentRoomData.myNickname) { // Assumindo que o primeiro a criar é o host e tem seu nick na lista
-                 li.innerHTML += ' <span class="text-xs text-amber-400">(Líder)</span>';
             }
             ui.playerListLobby.appendChild(li);
         });
@@ -436,8 +490,6 @@ function updateLobbyUI() {
     ui.playerCount.textContent = currentRoomData.players.length;
 }
 
-
-// --- Lógica da Página do Quiz (quiz.html) ---
 function setupQuizPage() {
     const ui = getQuizPageElements();
     if (!ui.quizArea) { console.log("QuizPage: Elemento quizArea não encontrado."); return; }
@@ -446,23 +498,27 @@ function setupQuizPage() {
 
     currentRoomData.roomPin = sessionStorage.getItem('currentRoomPin');
     currentRoomData.myNickname = localStorage.getItem('quizNickname') || 'Jogador';
-    currentRoomData.isHost = sessionStorage.getItem('isHost') === 'true'; // Pode não ser relevante aqui
+    currentRoomData.isHost = sessionStorage.getItem('isHost') === 'true'; 
 
     if (!currentRoomData.roomPin) {
         console.warn("QuizPage: Sem PIN de sala. Redirecionando para home.");
-        window.location.href = '/'; // Se não tem PIN, não deveria estar aqui
+        window.location.href = '/'; 
         return;
     }
+    console.log(`QuizPage: Recuperado do sessionStorage/localStorage - PIN: ${currentRoomData.roomPin}, Nickname: ${currentRoomData.myNickname}`);
+
 
     if(ui.nicknameDisplay) ui.nicknameDisplay.textContent = `Jogador: ${currentRoomData.myNickname}`;
     if(ui.scoreDisplay) ui.scoreDisplay.textContent = currentRoomData.currentScore;
 
-    if (!currentRoomData.currentQuestion) { // Se não recebeu uma questão ainda
+    if (!currentRoomData.currentQuestion) { 
         showWaitingScreen("Aguardando Quiz", "Esperando a próxima pergunta...", ui);
+    } else {
+        updateQuizUI(ui);
     }
 }
 
-function updateQuizUI(ui) { // ui = getQuizPageElements()
+function updateQuizUI(ui) { 
     if (!currentRoomData.currentQuestion || !ui.quizArea) {
         console.warn("updateQuizUI: Sem dados da questão ou UI não encontrada.");
         if (ui.quizArea && !currentRoomData.quizActive && currentRoomData.questionNumber === 0) {
@@ -486,7 +542,7 @@ function updateQuizUI(ui) { // ui = getQuizPageElements()
         button.addEventListener('click', handleOptionClick);
         if(ui.optionsContainer) ui.optionsContainer.appendChild(button);
     });
-    updatePlayerListQuiz(ui); // Atualiza lista de jogadores na tela do quiz
+    updatePlayerListQuiz(ui); 
 }
 
 function handleOptionClick(event) {
@@ -508,7 +564,7 @@ function handleOptionClick(event) {
     if (questionTimerInterval) clearInterval(questionTimerInterval);
 }
 
-function startClientTimer(duration, ui) { // ui = getQuizPageElements()
+function startClientTimer(duration, ui) { 
     if (questionTimerInterval) clearInterval(questionTimerInterval);
     let timeLeft = duration;
     if(ui.timerDisplay) ui.timerDisplay.textContent = formatTime(timeLeft);
@@ -543,14 +599,13 @@ function formatTime(seconds) {
     return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
-function updatePlayerListQuiz(ui) { // ui = getQuizPageElements()
+function updatePlayerListQuiz(ui) { 
     if (ui.activePlayersDisplay) {
-        // Mostra apenas a contagem para não poluir muito a tela do quiz
         ui.activePlayersDisplay.textContent = `${currentRoomData.players.length} jogador(es)`;
     }
 }
 
-function showWaitingScreen(title, message, uiElements) { // uiElements é opcional, para pegar waitingScreen
+function showWaitingScreen(title, message, uiElements) { 
     const ws = uiElements?.waitingScreen || document.getElementById('waitingScreen');
     const wt = uiElements?.waitingTitle || document.getElementById('waitingTitle');
     const wm = uiElements?.waitingMessage || document.getElementById('waitingMessage');
@@ -570,18 +625,16 @@ function hideWaitingScreen(uiElements) {
     }
 }
 
-// --- Lógica da Página de Resultados (results.html) ---
 function setupResultsPage() {
     const ui = getResultsPageElements();
     if (!ui.finalScoreDisplay) { console.log("ResultsPage: Elementos não encontrados."); return; }
     console.log("ResultsPage: Configurando...");
-    connectSocket(); // Conecta para o caso de querer implementar "jogar novamente" sem refresh total
+    connectSocket(); 
     populateResultsPage(ui);
 
     if(ui.playAgainBtn) {
         ui.playAgainBtn.addEventListener('click', () => {
             sessionStorage.removeItem('quizResults_room_' + sessionStorage.getItem('lastRoomPinForResults'));
-            sessionStorage.removeItem('myNickname'); // Ou localStorage.removeItem('quizNickname')
             sessionStorage.removeItem('mySid');
             sessionStorage.removeItem('currentRoomPin');
             sessionStorage.removeItem('isHost');
@@ -591,17 +644,17 @@ function setupResultsPage() {
     }
 }
 
-function populateResultsPage(ui) { // ui = getResultsPageElements()
+function populateResultsPage(ui) { 
     const lastRoomPin = sessionStorage.getItem('lastRoomPinForResults');
     const resultsDataString = sessionStorage.getItem('quizResults_room_' + lastRoomPin);
-    const userNick = localStorage.getItem('quizNickname') || 'Jogador'; // Usa localStorage para nickname
+    const userNick = localStorage.getItem('quizNickname') || 'Jogador'; 
     const mySidSession = sessionStorage.getItem('mySid');
 
     if(ui.userNicknameResult) ui.userNicknameResult.textContent = userNick;
 
     if (resultsDataString) {
         const allResults = JSON.parse(resultsDataString);
-        const myResult = allResults.find(r => r.sid === mySidSession); // Prioriza SID para resultado pessoal
+        const myResult = allResults.find(r => r.sid === mySidSession); 
 
         if (myResult) {
             if(ui.finalScoreDisplay) ui.finalScoreDisplay.textContent = myResult.score;
@@ -632,7 +685,7 @@ function populateResultsPage(ui) { // ui = getResultsPageElements()
     }
 }
 
-// --- Inicialização da Página ---
+
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     console.log("DOM Carregado. Path:", path);
