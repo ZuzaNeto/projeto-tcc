@@ -12,6 +12,7 @@ let currentRoomData = {
     totalQuestions: 0,
     timeLimit: 20,
     currentScore: 0,
+    challengeType: 'desafio1', // Novo: tipo de desafio padrão
 };
 let questionTimerInterval = null;
 let selectedOptionId = null;
@@ -20,6 +21,7 @@ let selectedOptionId = null;
 function getIndexPageElements() {
     return {
         nicknameInput: document.getElementById('nickname'),
+        challengeTypeSelect: document.getElementById('challengeType'), // Novo: seletor de desafio
         createRoomBtn: document.getElementById('createRoomBtn'),
         roomPinInput: document.getElementById('roomPinInput'),
         joinRoomBtn: document.getElementById('joinRoomBtn'),
@@ -135,8 +137,10 @@ function setupSocketListeners() {
             currentRoomData.myNickname = data.nickname;
             currentRoomData.isHost = data.isHost;
             currentRoomData.players = data.players || [data.nickname];
+            currentRoomData.challengeType = data.challengeType; // Novo: armazena o tipo de desafio
             sessionStorage.setItem('currentRoomPin', data.roomPin);
             sessionStorage.setItem('isHost', data.isHost.toString()); 
+            sessionStorage.setItem('challengeType', data.challengeType); // Novo: armazena o tipo de desafio
             localStorage.setItem('quizNickname', data.nickname); 
             console.log(`Redirecionando para /lobby para a sala ${data.roomPin}`);
             window.location.href = '/lobby';
@@ -152,8 +156,10 @@ function setupSocketListeners() {
         currentRoomData.myNickname = data.nickname; 
         currentRoomData.isHost = data.isHost;
         currentRoomData.players = data.players || []; 
+        currentRoomData.challengeType = data.challengeType; // Novo: armazena o tipo de desafio
         sessionStorage.setItem('currentRoomPin', data.roomPin);
         sessionStorage.setItem('isHost', data.isHost.toString());
+        sessionStorage.setItem('challengeType', data.challengeType); // Novo: armazena o tipo de desafio
         localStorage.setItem('quizNickname', data.nickname); 
 
         const path = window.location.pathname;
@@ -234,6 +240,7 @@ function setupSocketListeners() {
         alert(`A sala ${data.roomPin} não existe mais ou foi encerrada. Você será redirecionado para a página inicial.`);
         sessionStorage.removeItem('currentRoomPin');
         sessionStorage.removeItem('isHost');
+        sessionStorage.removeItem('challengeType'); // Remove o tipo de desafio
         sessionStorage.removeItem('lastRoomPinForResults'); 
         
         const path = window.location.pathname;
@@ -345,7 +352,7 @@ function setupSocketListeners() {
 function setupIndexPage() {
     // ... (mesma lógica de antes)
     const ui = getIndexPageElements();
-    if (!ui.createRoomBtn || !ui.nicknameInput || !ui.joinRoomBtn || !ui.roomPinInput || !ui.statusMessage) {
+    if (!ui.createRoomBtn || !ui.nicknameInput || !ui.joinRoomBtn || !ui.roomPinInput || !ui.statusMessage || !ui.challengeTypeSelect) { // Adicionado challengeTypeSelect
         console.error("IndexPage: Elementos essenciais não encontrados.");
         return;
     }
@@ -358,12 +365,13 @@ function setupIndexPage() {
     ui.createRoomBtn.addEventListener('click', () => {
         console.log("IndexPage: Botão 'Criar Sala' clicado.");
         const nick = ui.nicknameInput.value.trim();
+        const challenge = ui.challengeTypeSelect.value; // Captura o valor do seletor
         if (!nick) { ui.statusMessage.textContent = 'Por favor, insira um apelido para criar a sala.'; return; }
         if (socket && socket.connected) {
             localStorage.setItem('quizNickname', nick); 
             currentRoomData.myNickname = nick; 
-            console.log(`IndexPage: Emitindo 'create_room' com nickname: ${nick}`);
-            socket.emit('create_room', { nickname: nick });
+            console.log(`IndexPage: Emitindo 'create_room' com nickname: ${nick}, challengeType: ${challenge}`);
+            socket.emit('create_room', { nickname: nick, challengeType: challenge }); // Envia o tipo de desafio
             ui.statusMessage.textContent = 'Criando sala...';
         } else {
             ui.statusMessage.textContent = 'Não conectado. Tentando conectar...';
@@ -410,13 +418,14 @@ function setupLobbyPage() {
     currentRoomData.roomPin = sessionStorage.getItem('currentRoomPin');
     currentRoomData.isHost = sessionStorage.getItem('isHost') === 'true';
     currentRoomData.myNickname = localStorage.getItem('quizNickname') || 'Jogador Lobby';
+    currentRoomData.challengeType = sessionStorage.getItem('challengeType') || 'desafio1'; // Novo: recupera o tipo de desafio
 
     if (!currentRoomData.roomPin) {
         console.warn("LobbyPage: Sem PIN de sala no sessionStorage após tentativa de recuperação. Redirecionando para home.");
         window.location.href = '/';
         return;
     }
-    console.log(`LobbyPage: Recuperado do sessionStorage - PIN: ${currentRoomData.roomPin}, É host? ${currentRoomData.isHost}, Nickname: ${currentRoomData.myNickname}`);
+    console.log(`LobbyPage: Recuperado do sessionStorage - PIN: ${currentRoomData.roomPin}, É host? ${currentRoomData.isHost}, Nickname: ${currentRoomData.myNickname}, Desafio: ${currentRoomData.challengeType}`);
 
     ui.roomPinDisplay.textContent = currentRoomData.roomPin;
     if (ui.copyPinBtn) {
@@ -499,13 +508,14 @@ function setupQuizPage() {
     currentRoomData.roomPin = sessionStorage.getItem('currentRoomPin');
     currentRoomData.myNickname = localStorage.getItem('quizNickname') || 'Jogador';
     currentRoomData.isHost = sessionStorage.getItem('isHost') === 'true'; 
+    currentRoomData.challengeType = sessionStorage.getItem('challengeType') || 'desafio1'; // Novo: recupera o tipo de desafio
 
     if (!currentRoomData.roomPin) {
         console.warn("QuizPage: Sem PIN de sala. Redirecionando para home.");
         window.location.href = '/'; 
         return;
     }
-    console.log(`QuizPage: Recuperado do sessionStorage/localStorage - PIN: ${currentRoomData.roomPin}, Nickname: ${currentRoomData.myNickname}`);
+    console.log(`QuizPage: Recuperado do sessionStorage/localStorage - PIN: ${currentRoomData.roomPin}, Nickname: ${currentRoomData.myNickname}, Desafio: ${currentRoomData.challengeType}`);
 
 
     if(ui.nicknameDisplay) ui.nicknameDisplay.textContent = `Jogador: ${currentRoomData.myNickname}`;
@@ -638,6 +648,7 @@ function setupResultsPage() {
             sessionStorage.removeItem('mySid');
             sessionStorage.removeItem('currentRoomPin');
             sessionStorage.removeItem('isHost');
+            sessionStorage.removeItem('challengeType'); // Remove o tipo de desafio
             sessionStorage.removeItem('lastRoomPinForResults');
             window.location.href = '/';
         });

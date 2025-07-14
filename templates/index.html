@@ -22,6 +22,16 @@
                        class="w-full px-4 py-3 rounded-lg bg-slate-700 border-2 border-slate-600 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/50 text-slate-100 placeholder-slate-400 outline-none transition-all duration-300">
             </div>
 
+            <!-- Novo seletor de desafio -->
+            <div class="mb-6">
+                <label for="challengeType" class="block text-sm font-medium text-slate-300 mb-1 text-left">Escolha o Desafio:</label>
+                <select id="challengeType" name="challengeType"
+                        class="w-full px-4 py-3 rounded-lg bg-slate-700 border-2 border-slate-600 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/50 text-slate-100 outline-none transition-all duration-300">
+                    <option value="desafio1">Desafio 1 (Nível Padrão)</option>
+                    <option value="desafio2">Desafio 2 (Nível Básico para Calouros)</option>
+                </select>
+            </div>
+
             <button id="createRoomBtn"
                     class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out mb-4">
                 Criar Nova Sala de Quiz

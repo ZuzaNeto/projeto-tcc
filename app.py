@@ -46,7 +46,8 @@ class QuizQuestion:
         return {"id": self.id, "text": self.text, "options": [opt.to_dict() for opt in self.options],
                 "correctOptionId": self.correct_option_id, "skillArea": self.skill_area, "difficulty": self.difficulty}
 
-new_quiz_questions_data = [
+# Questões do Desafio 1 (já existentes + 6 novas)
+challenge_1_questions_data = [
   {"id": "nq1","text": "Se um algoritmo é uma sequência finita de instruções para resolver um problema, qual das seguintes opções MELHOR descreve uma característica essencial de um bom algoritmo?","options": [{"id": "nq1_opt1", "text": "Ser escrito na linguagem de programação mais recente."}, {"id": "nq1_opt2", "text": "Ser o mais curto possível, mesmo que difícil de entender."}, {"id": "nq1_opt3", "text": "Ser eficiente em termos de tempo e recursos, e ser claro."}, {"id": "nq1_opt4", "text": "Funcionar apenas para um conjunto específico de dados de entrada."}],"correctOptionId": "nq1_opt3","skillArea": "BICT - Lógica de Programação","difficulty": "Fácil"},
   {"id": "nq2","text": "No contexto de redes de computadores, o que significa a sigla 'IP' em 'Endereço IP'?","options": [{"id": "nq2_opt1", "text": "Internal Protocol"}, {"id": "nq2_opt2", "text": "Internet Protocol"}, {"id": "nq2_opt3", "text": "Instruction Pointer"}, {"id": "nq2_opt4", "text": "Immediate Power"}],"correctOptionId": "nq2_opt2","skillArea": "BICT - Redes de Computadores","difficulty": "Fácil"},
   {"id": "nq3","text": "Qual o resultado da expressão lógica: (VERDADEIRO OU FALSO) E (NÃO FALSO)?","options": [{"id": "nq3_opt1", "text": "VERDADEIRO"}, {"id": "nq3_opt2", "text": "FALSO"}, {"id": "nq3_opt3", "text": "Depende"}, {"id": "nq3_opt4", "text": "Inválido"}],"correctOptionId": "nq3_opt1","skillArea": "BICT - Matemática Discreta","difficulty": "Fácil"},
@@ -58,10 +59,61 @@ new_quiz_questions_data = [
   {"id": "nq9","text": "Em Engenharia de Transportes, o planejamento de um sistema de semáforos em um cruzamento visa principalmente:","options": [{"id": "nq9_opt1", "text": "Aumentar a velocidade média dos veículos na via."},{"id": "nq9_opt2", "text": "Priorizar exclusivamente o fluxo de transporte público."},{"id": "nq9_opt3", "text": "Otimizar o fluxo de veículos e a segurança de pedestres."},{"id": "nq9_opt4", "text": "Reduzir o número de faixas de rolamento."}],"correctOptionId": "nq9_opt3","skillArea": "Eng. Transportes - Engenharia de Tráfego","difficulty": "Médio"},
   {"id": "nq10","text": "Se um terreno retangular tem 20 metros de frente e 30 metros de profundidade, qual é a sua área total?","options": [{"id": "nq10_opt1", "text": "50 m²"},{"id": "nq10_opt2", "text": "100 m²"},{"id": "nq10_opt3", "text": "600 m²"},{"id": "nq10_opt4", "text": "500 m²"}],"correctOptionId": "nq10_opt3","skillArea": "Cálculo Básico - Geometria","difficulty": "Fácil"},
   {"id": "nq11","text": "Um projeto requer que uma peça metálica se expanda no máximo 0.05mm com o calor. O engenheiro precisa calcular a variação de temperatura permitida. Qual conceito físico é fundamental aqui?","options": [{"id": "nq11_opt1", "text": "Resistência Elétrica"},{"id": "nq11_opt2", "text": "Dilatação Térmica"},{"id": "nq11_opt3", "text": "Capacitância"},{"id": "nq11_opt4", "text": "Momento de Inércia"}],"correctOptionId": "nq11_opt2","skillArea": "Física Aplicada - Termologia","difficulty": "Médio"},
-  {"id": "nq12","text": "Se você tem um conjunto de dados de medições e precisa encontrar o valor que ocorre com maior frequência, qual medida estatística você usaria?","options": [{"id": "nq12_opt1", "text": "Média Aritmética"},{"id": "nq12_opt2", "text": "Mediana"},{"id": "nq12_opt3", "text": "Moda"},{"id": "nq12_opt4", "text": "Desvio Padrão"}],"correctOptionId": "nq12_opt3","skillArea": "BICT - Estatística Básica","difficulty": "Fácil"}
+  {"id": "nq12","text": "Se você tem um conjunto de dados de medições e precisa encontrar o valor que ocorre com maior frequência, qual medida estatística você usaria?","options": [{"id": "nq12_opt1", "text": "Média Aritmética"},{"id": "nq12_opt2", "text": "Mediana"},{"id": "nq12_opt3", "text": "Moda"},{"id": "nq12_opt4", "text": "Desvio Padrão"}],"correctOptionId": "nq12_opt3","skillArea": "BICT - Estatística Básica","difficulty": "Fácil"},
+  # Novas perguntas para o Desafio 1 (nível 2º-6º período)
+  {"id": "nq13_comp", "text": "Em ciência da computação, qual das seguintes estruturas de dados é mais eficiente para acessar elementos por índice, mas menos eficiente para inserções ou remoções no meio da sequência?", "options": [{"id": "nq13_comp_opt1", "text": "Lista Encadeada"}, {"id": "nq13_comp_opt2", "text": "Árvore Binária"}, {"id": "nq13_comp_opt3", "text": "Array (Vetor)"}, {"id": "nq13_comp_opt4", "text": "Fila"}], "correctOptionId": "nq13_comp_opt3", "skillArea": "Eng. Computação - Estruturas de Dados", "difficulty": "Médio"},
+  {"id": "nq14_civil", "text": "No dimensionamento de estruturas de concreto armado, qual a principal função das barras de aço (armadura) inseridas no concreto?", "options": [{"id": "nq14_civil_opt1", "text": "Aumentar o peso da estrutura"}, {"id": "nq14_civil_opt2", "text": "Resistir aos esforços de tração"}, {"id": "nq14_civil_opt3", "text": "Melhorar o isolamento térmico"}, {"id": "nq14_civil_opt4", "text": "Acelerar a secagem do concreto"}], "correctOptionId": "nq14_civil_opt2", "skillArea": "Eng. Civil - Concreto Armado", "difficulty": "Médio"},
+  {"id": "nq15_mec", "text": "Qual das seguintes leis da Termodinâmica estabelece que a entropia de um sistema isolado nunca diminui com o tempo, tendendo a um máximo?", "options": [{"id": "nq15_mec_opt1", "text": "Lei Zero da Termodinâmica"}, {"id": "nq15_mec_opt2", "text": "Primeira Lei da Termodinâmica"}, {"id": "nq15_mec_opt3", "text": "Segunda Lei da Termodinâmica"}, {"id": "nq15_mec_opt4", "text": "Terceira Lei da Termodinâmica"}], "correctOptionId": "nq15_mec_opt3", "skillArea": "Eng. Mecânica - Termodinâmica", "difficulty": "Médio"},
+  {"id": "nq16_aero", "text": "Para que um objeto permaneça em órbita estável ao redor da Terra, qual força deve estar em equilíbrio com a força centrífuga gerada pelo movimento do objeto?", "options": [{"id": "nq16_aero_opt1", "text": "Força de arrasto atmosférico"}, {"id": "nq16_aero_opt2", "text": "Força de atrito"}, {"id": "nq16_aero_opt3", "text": "Força gravitacional"}, {"id": "nq16_aero_opt4", "text": "Força de sustentação"}], "correctOptionId": "nq16_aero_opt3", "skillArea": "Eng. Aeroespacial - Mecânica Orbital", "difficulty": "Médio"},
+  {"id": "nq17_amb", "text": "Qual o principal objetivo do tratamento de esgoto sanitário em uma Estação de Tratamento de Esgoto (ETE) antes do descarte no ambiente?", "options": [{"id": "nq17_amb_opt1", "text": "Aumentar a quantidade de água disponível"}, {"id": "nq17_amb_opt2", "text": "Remover poluentes e patógenos para proteger a saúde pública e os ecossistemas"}, {"id": "nq17_amb_opt3", "text": "Produzir energia elétrica"}, {"id": "nq17_amb_opt4", "text": "Gerar fertilizantes para a agricultura"}], "correctOptionId": "nq17_amb_opt2", "skillArea": "Eng. Ambiental - Saneamento Básico", "difficulty": "Médio"},
+  {"id": "nq18_trans", "text": "No planejamento de transportes, o que representa o conceito de 'capacidade de uma via'?", "options": [{"id": "nq18_trans_opt1", "text": "A velocidade máxima permitida na via"}, {"id": "nq18_trans_opt2", "text": "O número máximo de veículos que podem passar por um ponto da via em um determinado período"}, {"id": "nq18_trans_opt3", "text": "O comprimento total da via"}, {"id": "nq18_trans_opt4", "text": "A largura da via em metros"}], "correctOptionId": "nq18_trans_opt2", "skillArea": "Eng. Transportes - Engenharia de Tráfego", "difficulty": "Médio"}
 ]
-new_quiz_questions = [QuizQuestion(q["id"], q["text"], [QuizOption(opt["id"], opt["text"]) for opt in q["options"]], q["correctOptionId"], q["skillArea"], q["difficulty"]) for q in new_quiz_questions_data]
-TOTAL_QUESTIONS = len(new_quiz_questions)
+
+# Novas questões para o Desafio 2 (nível mais básico)
+challenge_2_questions_data = [
+    # Engenharia de Computação (3 perguntas)
+    {"id": "c2_comp1", "text": "Qual é a principal função de um 'algoritmo' na programação de computadores?", "options": [{"id": "c2_comp1_opt1", "text": "Escrever textos"}, {"id": "c2_comp1_opt2", "text": "Resolver problemas passo a passo"}, {"id": "c2_comp1_opt3", "text": "Desenhar imagens"}, {"id": "c2_comp1_opt4", "text": "Tocar música"}], "correctOptionId": "c2_comp1_opt2", "skillArea": "Eng. Computação - Fundamentos de Programação", "difficulty": "Muito Fácil"},
+    {"id": "c2_comp2", "text": "O que significa a sigla 'CPU' em um computador?", "options": [{"id": "c2_comp2_opt1", "text": "Central Power Unit"}, {"id": "c2_comp2_opt2", "text": "Computer Processing Utility"}, {"id": "c2_comp2_opt3", "text": "Central Processing Unit"}, {"id": "c2_comp2_opt4", "text": "Core Program Unit"}], "correctOptionId": "c2_comp2_opt3", "skillArea": "Eng. Computação - Hardware Básico", "difficulty": "Muito Fácil"},
+    {"id": "c2_comp3", "text": "Qual das seguintes opções é um exemplo de linguagem de programação usada para criar páginas web interativas?", "options": [{"id": "c2_comp3_opt1", "text": "Microsoft Word"}, {"id": "c2_comp3_opt2", "text": "JavaScript"}, {"id": "c2_comp3_opt3", "text": "Adobe Photoshop"}, {"id": "c2_comp3_opt4", "text": "Excel"}], "correctOptionId": "c2_comp3_opt2", "skillArea": "Eng. Computação - Desenvolvimento Web", "difficulty": "Fácil"},
+
+    # Engenharia Civil (3 perguntas)
+    {"id": "c2_civil1", "text": "Qual o principal objetivo de uma 'fundação' em um edifício?", "options": [{"id": "c2_civil1_opt1", "text": "Decorar o exterior"}, {"id": "c2_civil1_opt2", "text": "Suportar o peso da estrutura e distribuí-lo no solo"}, {"id": "c2_civil1_opt3", "text": "Proteger contra raios"}, {"id": "c2_civil1_opt4", "text": "Armazenar água"}], "correctOptionId": "c2_civil1_opt2", "skillArea": "Eng. Civil - Estruturas Básicas", "difficulty": "Muito Fácil"},
+    {"id": "c2_civil2", "text": "O que é o 'concreto' na construção civil?", "options": [{"id": "c2_civil2_opt1", "text": "Um tipo de madeira"}, {"id": "c2_civil2_opt2", "text": "Uma mistura de cimento, água, areia e brita"}, {"id": "c2_civil2_opt3", "text": "Uma chapa de metal"}, {"id": "c2_civil2_opt4", "text": "Um tipo de vidro"}], "correctOptionId": "c2_civil2_opt2", "skillArea": "Eng. Civil - Materiais de Construção", "difficulty": "Fácil"},
+    {"id": "c2_civil3", "text": "Qual a importância de um engenheiro civil no planejamento de cidades?", "options": [{"id": "c2_civil3_opt1", "text": "Apenas projetar casas"}, {"id": "c2_civil3_opt2", "text": "Desenvolver infraestruturas como estradas, pontes e sistemas de saneamento"}, {"id": "c2_civil3_opt3", "text": "Cuidar do paisagismo"}, {"id": "c2_civil3_opt4", "text": "Gerenciar o tráfego de veículos"}], "correctOptionId": "c2_civil3_opt2", "skillArea": "Eng. Civil - Urbanismo e Infraestrutura", "difficulty": "Fácil"},
+
+    # Engenharia Mecânica (3 perguntas)
+    {"id": "c2_mec1", "text": "Qual o principal objetivo de um motor, como o de um carro?", "options": [{"id": "c2_mec1_opt1", "text": "Gerar eletricidade"}, {"id": "c2_mec1_opt2", "text": "Converter energia (química ou outra) em movimento"}, {"id": "c2_mec1_opt3", "text": "Purificar o ar"}, {"id": "c2_mec1_opt4", "text": "Aquecer o veículo"}], "correctOptionId": "c2_mec1_opt2", "skillArea": "Eng. Mecânica - Fundamentos de Máquinas", "difficulty": "Muito Fácil"},
+    {"id": "c2_mec2", "text": "O que é uma 'engrenagem' e para que serve em um sistema mecânico?", "options": [{"id": "c2_mec2_opt1", "text": "Um tipo de parafuso"}, {"id": "c2_mec2_opt2", "text": "Uma roda dentada usada para transmitir movimento e força"}, {"id": "c2_mec2_opt3", "text": "Um sensor de temperatura"}, {"id": "c2_mec2_opt4", "text": "Um isolante elétrico"}], "correctOptionId": "c2_mec2_opt2", "skillArea": "Eng. Mecânica - Elementos de Máquinas", "difficulty": "Fácil"},
+    {"id": "c2_mec3", "text": "Qual o conceito que estuda como o calor se transforma em outras formas de energia e vice-versa?", "options": [{"id": "c2_mec3_opt1", "text": "Eletricidade"}, {"id": "c2_mec3_opt2", "text": "Óptica"}, {"id": "c2_mec3_opt3", "text": "Termodinâmica"}, {"id": "c2_mec3_opt4", "text": "Acústica"}], "correctOptionId": "c2_mec3_opt3", "skillArea": "Eng. Mecânica - Termodinâmica", "difficulty": "Fácil"},
+
+    # Engenharia Aeroespacial (3 perguntas)
+    {"id": "c2_aero1", "text": "Qual princípio físico fundamental explica como as asas de um avião geram sustentação para voar?", "options": [{"id": "c2_aero1_opt1", "text": "Lei da Gravidade"}, {"id": "c2_aero1_opt2", "text": "Princípio de Bernoulli (diferença de pressão)"}, {"id": "c2_aero1_opt3", "text": "Lei de Ohm"}, {"id": "c2_aero1_opt4", "text": "Princípio da Conservação de Massa"}], "correctOptionId": "c2_aero1_opt2", "skillArea": "Eng. Aeroespacial - Aerodinâmica Básica", "difficulty": "Fácil"},
+    {"id": "c2_aero2", "text": "Qual a principal diferença entre a propulsão de um avião a jato e a de um foguete?", "options": [{"id": "c2_aero2_opt1", "text": "Aviões usam rodas e foguetes não"}, {"id": "c2_aero2_opt2", "text": "Aviões precisam de ar para queimar combustível, foguetes carregam seu próprio oxidante"}, {"id": "c2_aero2_opt3", "text": "Aviões voam mais rápido"}, {"id": "c2_aero2_opt4", "text": "Foguetes são maiores"}], "correctOptionId": "c2_aero2_opt2", "skillArea": "Eng. Aeroespacial - Propulsão", "difficulty": "Médio"},
+    {"id": "c2_aero3", "text": "Para que serve um satélite artificial em órbita da Terra?", "options": [{"id": "c2_aero3_opt1", "text": "Apenas para observar estrelas"}, {"id": "c2_aero3_opt2", "text": "Comunicações, previsão do tempo, navegação (GPS)"}, {"id": "c2_aero3_opt3", "text": "Coletar lixo espacial"}, {"id": "c2_aero3_opt4", "text": "Ajudar na agricultura"}], "correctOptionId": "c2_aero3_opt2", "skillArea": "Eng. Aeroespacial - Aplicações Espaciais", "difficulty": "Fácil"},
+
+    # Engenharia Ambiental (3 perguntas)
+    {"id": "c2_amb1", "text": "O que é 'reciclagem' e por que ela é importante para o meio ambiente?", "options": [{"id": "c2_amb1_opt1", "text": "Queimar lixo para produzir energia"}, {"id": "c2_amb1_opt2", "text": "Transformar materiais usados em novos produtos para reduzir o descarte"}, {"id": "c2_amb1_opt3", "text": "Jogar lixo em aterros"}, {"id": "c2_amb1_opt4", "text": "Usar mais produtos descartáveis"}], "correctOptionId": "c2_amb1_opt2", "skillArea": "Eng. Ambiental - Gestão de Resíduos", "difficulty": "Muito Fácil"},
+    {"id": "c2_amb2", "text": "Qual o nome do fenômeno natural que mantém a Terra aquecida, mas que pode ser intensificado pela poluição, causando mudanças climáticas?", "options": [{"id": "c2_amb2_opt1", "text": "Chuva ácida"}, {"id": "c2_amb2_opt2", "text": "Efeito estufa"}, {"id": "c2_amb2_opt3", "text": "Camada de ozônio"}, {"id": "c2_amb2_opt4", "text": "Maré alta"}], "correctOptionId": "c2_amb2_opt2", "skillArea": "Eng. Ambiental - Clima e Poluição", "difficulty": "Fácil"},
+    {"id": "c2_amb3", "text": "Qual das seguintes é uma fonte de energia considerada 'limpa' ou renovável?", "options": [{"id": "c2_amb3_opt1", "text": "Carvão mineral"}, {"id": "c2_amb3_opt2", "text": "Petróleo"}, {"id": "c2_amb3_opt3", "text": "Energia solar"}, {"id": "c2_amb3_opt4", "text": "Gás natural"}], "correctOptionId": "c2_amb3_opt3", "skillArea": "Eng. Ambiental - Energias Renováveis", "difficulty": "Muito Fácil"},
+
+    # Engenharia de Transportes (3 perguntas)
+    {"id": "c2_trans1", "text": "Qual o principal objetivo de um sistema de transporte público bem planejado em uma cidade?", "options": [{"id": "c2_trans1_opt1", "text": "Apenas transportar carros"}, {"id": "c2_trans1_opt2", "text": "Reduzir engarrafamentos e poluição, e oferecer mobilidade acessível"}, {"id": "c2_trans1_opt3", "text": "Construir mais estacionamentos"}, {"id": "c2_trans1_opt4", "text": "Aumentar o número de semáforos"}], "correctOptionId": "c2_trans1_opt2", "skillArea": "Eng. Transportes - Mobilidade Urbana", "difficulty": "Muito Fácil"},
+    {"id": "c2_trans2", "text": "Por que é importante para um país ter uma boa rede de estradas e ferrovias?", "options": [{"id": "c2_trans2_opt1", "text": "Para que as pessoas possam passear de carro"}, {"id": "c2_trans2_opt2", "text": "Para facilitar o transporte de mercadorias e pessoas, impulsionando a economia"}, {"id": "c2_trans2_opt3", "text": "Para criar mais empregos para motoristas"}, {"id": "c2_trans2_opt4", "text": "Para que os veículos sejam mais rápidos"}], "correctOptionId": "c2_trans2_opt2", "skillArea": "Eng. Transportes - Infraestrutura", "difficulty": "Fácil"},
+    {"id": "c2_trans3", "text": "O que é um 'plano de mobilidade urbana'?", "options": [{"id": "c2_trans3_opt1", "text": "Um mapa de ruas"}, {"id": "c2_trans3_opt2", "text": "Um documento que organiza como as pessoas e mercadorias se movem na cidade, buscando eficiência e sustentabilidade"}, {"id": "c2_trans3_opt3", "text": "Uma lista de empresas de ônibus"}, {"id": "c2_trans3_opt4", "text": "Um guia turístico"}], "correctOptionId": "c2_trans3_opt2", "skillArea": "Eng. Transportes - Planejamento Urbano", "difficulty": "Fácil"}
+]
+
+# Converte os dados das questões em objetos QuizQuestion
+challenge_1_questions = [QuizQuestion(q["id"], q["text"], [QuizOption(opt["id"], opt["text"]) for opt in q["options"]], q["correctOptionId"], q["skillArea"], q["difficulty"]) for q in challenge_1_questions_data]
+challenge_2_questions = [QuizQuestion(q["id"], q["text"], [QuizOption(opt["id"], opt["text"]) for opt in q["options"]], q["correctOptionId"], q["skillArea"], q["difficulty"]) for q in challenge_2_questions_data]
+
+# Dicionário para armazenar todos os conjuntos de questões
+ALL_CHALLENGES = {
+    "desafio1": challenge_1_questions,
+    "desafio2": challenge_2_questions
+}
+
+# TOTAL_QUESTIONS será dinâmico, dependendo do desafio escolhido para a sala
+# Não definimos TOTAL_QUESTIONS aqui globalmente, ele será obtido da sala
 
 rooms_data = {} 
 rooms_lock = threading.Lock()
@@ -92,10 +144,16 @@ def _start_quiz_logic(room_pin):
         logger.error(f"_start_quiz_logic chamada para sala inexistente: {room_pin}")
         return
 
-    logger.info(f"Sala {room_pin}: Dentro de _start_quiz_logic: Iniciando lógica do quiz.")
+    # Obter o conjunto de questões para o desafio da sala
+    current_challenge_questions = ALL_CHALLENGES.get(room["challenge_type"], challenge_1_questions)
+    total_questions_for_room = len(current_challenge_questions)
+
+    logger.info(f"Sala {room_pin}: Dentro de _start_quiz_logic: Iniciando lógica do quiz para desafio '{room['challenge_type']}'.")
     room["game_state"]["current_question_index"] = -1
     room["game_state"]["quiz_active"] = True
     room["game_state"]["question_start_time"] = None
+    room["game_state"]["total_questions_in_challenge"] = total_questions_for_room # Armazena o total de questões para a sala
+    
     if room["game_state"].get("question_timer_thread") and room["game_state"]["question_timer_thread"].is_alive():
         logger.debug(f"Sala {room_pin}: _start_quiz_logic: Timer anterior ainda ativo (será ignorado).")
     room["game_state"]["question_timer_thread"] = None
@@ -120,6 +178,7 @@ def _reset_room_quiz_state(room_pin):
     room["game_state"] = {
         "current_question_index": -1, "quiz_active": False, "question_start_time": None,
         "time_per_question": 20, "question_timer_thread": None,
+        "total_questions_in_challenge": 0 # Será atualizado em _start_quiz_logic
     }
     for player_sid_key in list(room["players"].keys()): 
         player_data = room["players"].get(player_sid_key)
@@ -135,9 +194,13 @@ def _get_current_question_for_room(room_pin):
     # Esta função assume que rooms_lock já foi adquirido
     room = rooms_data.get(room_pin)
     if not room or not room["game_state"]["quiz_active"]: return None
+    
     idx = room["game_state"]["current_question_index"]
-    if 0 <= idx < TOTAL_QUESTIONS:
-        return new_quiz_questions[idx]
+    challenge_type = room.get("challenge_type", "desafio1") # Pega o tipo de desafio da sala
+    current_challenge_questions = ALL_CHALLENGES.get(challenge_type, challenge_1_questions) # Pega as questões corretas
+    
+    if 0 <= idx < len(current_challenge_questions):
+        return current_challenge_questions[idx]
     return None
 
 def _advance_question_for_room(room_pin):
@@ -149,9 +212,12 @@ def _advance_question_for_room(room_pin):
 
     room["game_state"]["current_question_index"] += 1
     idx = room["game_state"]["current_question_index"]
+    
+    total_questions_for_room = room["game_state"]["total_questions_in_challenge"] # Usa o total armazenado na sala
+    current_challenge_questions = ALL_CHALLENGES.get(room["challenge_type"], challenge_1_questions) # Pega as questões corretas
 
-    if idx < TOTAL_QUESTIONS:
-        current_q = new_quiz_questions[idx]
+    if idx < total_questions_for_room:
+        current_q = current_challenge_questions[idx]
         logger.info(f"Sala {room_pin}: Avançando para P{idx + 1} - {current_q.text[:30]}...")
         room["game_state"]["question_start_time"] = time.time()
         for player_sid_key in list(room["players"].keys()): 
@@ -160,7 +226,7 @@ def _advance_question_for_room(room_pin):
                 del player_data["answered_current_question"]
         
         payload = {"question": current_q.to_dict(), "questionNumber": idx + 1,
-                   "totalQuestions": TOTAL_QUESTIONS, "timeLimit": room["game_state"]["time_per_question"]}
+                   "totalQuestions": total_questions_for_room, "timeLimit": room["game_state"]["time_per_question"]}
         socketio.emit('new_question', payload, room=room_pin)
         _start_question_timer_for_room(room_pin) # Esta também assume lock
     else:
@@ -225,9 +291,12 @@ def _calculate_recommendation_for_room(player_answers):
             if skill: correct_skill_counts[skill] += 1
     if not correct_skill_counts: return "Nenhum acerto para sugerir área."
     best_skill_area = max(correct_skill_counts, key=correct_skill_counts.get)
+    
+    # Mapeamento de áreas de habilidade para sugestões de curso
     course_suggestions = {
         "BICT - Lógica de Programação": "Engenharia de Computação, Ciência da Computação",
-        "BICT - Redes de Computadores": "Engenharia de Computação", "BICT - Matemática Discreta": "Engenharia de Computação",
+        "BICT - Redes de Computadores": "Engenharia de Computação", 
+        "BICT - Matemática Discreta": "Engenharia de Computação",
         "Eng. Computação - Arquitetura de Computadores": "Engenharia de Computação",
         "Eng. Civil - Materiais de Construção": "Engenharia Civil",
         "Eng. Mecânica - Termodinâmica": "Engenharia Mecânica, Eng. Aeroespacial",
@@ -236,8 +305,31 @@ def _calculate_recommendation_for_room(player_answers):
         "Eng. Transportes - Engenharia de Tráfego": "Engenharia de Transportes",
         "Cálculo Básico - Geometria": "Todas as Engenharias",
         "Física Aplicada - Termologia": "Eng. Mecânica, Eng. Materiais",
-        "BICT - Estatística Básica": "Todas as Engenharias", "Conhecimentos Gerais": "Qualquer área!"
+        "BICT - Estatística Básica": "Todas as Engenharias", 
+        "Conhecimentos Gerais": "Qualquer área!",
+        # Novas áreas de habilidade para o Desafio 2
+        "Eng. Computação - Fundamentos de Programação": "Engenharia de Computação, Ciência da Computação",
+        "Eng. Computação - Hardware Básico": "Engenharia de Computação",
+        "Eng. Computação - Desenvolvimento Web": "Engenharia de Computação, Sistemas de Informação",
+        "Eng. Civil - Estruturas Básicas": "Engenharia Civil",
+        "Eng. Civil - Urbanismo e Infraestrutura": "Engenharia Civil",
+        "Eng. Mecânica - Fundamentos de Máquinas": "Engenharia Mecânica, Eng. de Produção",
+        "Eng. Mecânica - Elementos de Máquinas": "Engenharia Mecânica",
+        "Eng. Aeroespacial - Aerodinâmica Básica": "Engenharia Aeroespacial",
+        "Eng. Aeroespacial - Propulsão": "Engenharia Aeroespacial",
+        "Eng. Aeroespacial - Aplicações Espaciais": "Engenharia Aeroespacial",
+        "Eng. Ambiental - Clima e Poluição": "Engenharia Ambiental",
+        "Eng. Ambiental - Energias Renováveis": "Engenharia Ambiental, Eng. de Energia",
+        "Eng. Transportes - Mobilidade Urbana": "Engenharia de Transportes, Eng. Civil",
+        "Eng. Transportes - Infraestrutura": "Engenharia de Transportes, Eng. Civil",
+        "Eng. Transportes - Planejamento Urbano": "Engenharia de Transportes, Eng. Civil",
+        # Novas áreas de habilidade para o Desafio 1 (perguntas avançadas)
+        "Eng. Computação - Estruturas de Dados": "Engenharia de Computação, Ciência da Computação",
+        "Eng. Civil - Concreto Armado": "Engenharia Civil",
+        "Eng. Aeroespacial - Mecânica Orbital": "Engenharia Aeroespacial",
+        "Eng. Ambiental - Saneamento Básico": "Engenharia Ambiental",
     }
+    
     suggestion_text = f"Você se destacou em '{best_skill_area}'. "
     suggestion_text += f"Cursos como {course_suggestions.get(best_skill_area, 'áreas relacionadas')} podem ser interessantes."
     sorted_correct_skills = sorted(correct_skill_counts.items(), key=lambda item: item[1], reverse=True)
@@ -250,8 +342,11 @@ def _end_quiz_for_room(room_pin):
     room = rooms_data.get(room_pin)
     if not room: return
 
+    # Obter o total de questões para a sala específica
+    total_questions_for_room = room["game_state"]["total_questions_in_challenge"]
+
     gs = room["game_state"]
-    if not gs["quiz_active"] and gs["current_question_index"] < (TOTAL_QUESTIONS -1) : 
+    if not gs["quiz_active"] and gs["current_question_index"] < (total_questions_for_room - 1) : 
          logger.info(f"Sala {room_pin}: _end_quiz_for_room chamada, mas quiz já inativo ou não completou todas as perguntas. Estado: {gs}")
 
     gs["quiz_active"] = False 
@@ -316,7 +411,8 @@ def handle_disconnect():
 def handle_create_room(data):
     sid = request.sid
     nickname = data.get('nickname', f'Host_{sid[:4]}').strip()[:25]
-    logger.info(f"handle_create_room: Recebido de SID {sid} para nickname {nickname}")
+    challenge_type = data.get('challengeType', 'desafio1') # Novo: tipo de desafio
+    logger.info(f"handle_create_room: Recebido de SID {sid} para nickname {nickname}, desafio {challenge_type}")
     
     room_pin = generate_room_pin()
     logger.info(f"handle_create_room: PIN gerado {room_pin}")
@@ -330,15 +426,17 @@ def handle_create_room(data):
             "game_state": {
                 "current_question_index": -1, "quiz_active": False, "question_start_time": None,
                 "time_per_question": 20, "question_timer_thread": None,
-            }
+                "total_questions_in_challenge": len(ALL_CHALLENGES.get(challenge_type, challenge_1_questions)) # Define o total de questões
+            },
+            "challenge_type": challenge_type # Armazena o tipo de desafio
         }
         join_room(room_pin) 
         session['current_room_pin'] = room_pin 
         session['is_host'] = True
-        logger.info(f"Sala {room_pin} criada com host '{nickname}' (SID: {sid}). Chaves de rooms_data: {list(rooms_data.keys())}")
+        logger.info(f"Sala {room_pin} criada com host '{nickname}' (SID: {sid}), desafio '{challenge_type}'. Chaves de rooms_data: {list(rooms_data.keys())}")
     
     emit('room_created', {"roomPin": room_pin, "nickname": nickname, "sid": sid, "isHost": True,
-                           "players": [nickname]}, room=sid)
+                           "players": [nickname], "challengeType": challenge_type}, room=sid) # Envia o tipo de desafio de volta
     logger.info(f"handle_create_room: Evento 'room_created' emitido para sala {room_pin}.")
 
 
@@ -370,7 +468,8 @@ def handle_join_room_pin(data):
         emit('room_joined', {
             "roomPin": room_pin, "nickname": nickname, "sid": sid, 
             "isHost": session['is_host'], "players": current_players_nicknames,
-            "quizActive": room["game_state"]["quiz_active"] 
+            "quizActive": room["game_state"]["quiz_active"],
+            "challengeType": room.get("challenge_type", "desafio1") # Envia o tipo de desafio da sala
         }, room=sid)
         
         socketio.emit('player_joined_room', {
@@ -383,8 +482,9 @@ def handle_join_room_pin(data):
             current_q = _get_current_question_for_room(room_pin) 
             if current_q:
                 q_idx = room["game_state"]["current_question_index"]
+                total_questions_for_room = room["game_state"]["total_questions_in_challenge"]
                 payload = {"question": current_q.to_dict(), "questionNumber": q_idx + 1,
-                           "totalQuestions": TOTAL_QUESTIONS, "timeLimit": room["game_state"]["time_per_question"]}
+                           "totalQuestions": total_questions_for_room, "timeLimit": room["game_state"]["time_per_question"]}
                 emit('new_question', payload, room=sid)
         logger.debug(f"handle_join_room_pin: Lock liberado para sala {room_pin}")
 
@@ -439,7 +539,8 @@ def handle_rejoin_room_check(data):
         emit('room_joined', { 
             "roomPin": room_pin, "nickname": nickname_from_client, "sid": sid, 
             "isHost": session['is_host'], "players": current_players_nicknames,
-            "quizActive": room["game_state"]["quiz_active"] 
+            "quizActive": room["game_state"]["quiz_active"],
+            "challengeType": room.get("challenge_type", "desafio1") # Envia o tipo de desafio da sala
         }, room=sid)
         
         socketio.emit('player_joined_room', { 
@@ -452,8 +553,9 @@ def handle_rejoin_room_check(data):
             current_q = _get_current_question_for_room(room_pin) 
             if current_q:
                 q_idx = room["game_state"]["current_question_index"]
+                total_questions_for_room = room["game_state"]["total_questions_in_challenge"]
                 payload = {"question": current_q.to_dict(), "questionNumber": q_idx + 1,
-                           "totalQuestions": TOTAL_QUESTIONS, "timeLimit": room["game_state"]["time_per_question"]}
+                           "totalQuestions": total_questions_for_room, "timeLimit": room["game_state"]["time_per_question"]}
                 emit('new_question', payload, room=sid)
 
 
@@ -555,4 +657,3 @@ if __name__ == '__main__':
     logger.info(f"--- Iniciando servidor Flask-SocketIO (PID: {os.getpid()}) ---")
     logger.info(f"--- Usando async_mode: {socketio.async_mode} ---")
     socketio.run(app, debug=True, host='0.0.0.0', port=os.environ.get('PORT', 5001))
-
