@@ -13,11 +13,7 @@ body {
     background-color: #10b981; /* emerald-500 */
     border-color: #34d399; /* emerald-400 */
     color: white; /* text-white */
-    /* Se o @apply acima não funcionar com o CDN em um arquivo CSS externo, precisaremos definir essas cores manualmente:
-    background-color: #10b981;  emerald-500
-    border-color: #34d399;  emerald-400
-    color: white;
-    */
+    
     animation: pulse-correct 0.6s ease-out;
 }
 

@@ -21,7 +21,7 @@ let selectedOptionId = null;
 function getIndexPageElements() {
     return {
         nicknameInput: document.getElementById('nickname'),
-        challengeTypeSelect: document.getElementById('challengeType'), // Novo: seletor de desafio
+        challengeTypeSelect: document.getElementById('challengeType'), 
         createRoomBtn: document.getElementById('createRoomBtn'),
         roomPinInput: document.getElementById('roomPinInput'),
         joinRoomBtn: document.getElementById('joinRoomBtn'),
@@ -472,8 +472,7 @@ function setupLobbyPage() {
     updateLobbyUI(); 
 }
 
-// --- Restante do script.js (updateLobbyUI, setupQuizPage, etc.) ---
-// ... (COPIE E COLE O RESTANTE DAS FUNÇÕES DA VERSÃO js_script_v8_rejoin_fix AQUI)
+
 function updateLobbyUI() {
     const ui = getLobbyPageElements();
     if (!ui.playerListLobby || !ui.playerCount) {

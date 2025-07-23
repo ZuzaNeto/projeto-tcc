@@ -46,7 +46,7 @@ class QuizQuestion:
         return {"id": self.id, "text": self.text, "options": [opt.to_dict() for opt in self.options],
                 "correctOptionId": self.correct_option_id, "skillArea": self.skill_area, "difficulty": self.difficulty}
 
-# Questões do Desafio 1 (já existentes + 6 novas)
+# Questões do Desafio 1 (já existentes + acrescentei 6 novas)
 challenge_1_questions_data = [
   {"id": "nq1","text": "Se um algoritmo é uma sequência finita de instruções para resolver um problema, qual das seguintes opções MELHOR descreve uma característica essencial de um bom algoritmo?","options": [{"id": "nq1_opt1", "text": "Ser escrito na linguagem de programação mais recente."}, {"id": "nq1_opt2", "text": "Ser o mais curto possível, mesmo que difícil de entender."}, {"id": "nq1_opt3", "text": "Ser eficiente em termos de tempo e recursos, e ser claro."}, {"id": "nq1_opt4", "text": "Funcionar apenas para um conjunto específico de dados de entrada."}],"correctOptionId": "nq1_opt3","skillArea": "BICT - Lógica de Programação","difficulty": "Fácil"},
   {"id": "nq2","text": "No contexto de redes de computadores, o que significa a sigla 'IP' em 'Endereço IP'?","options": [{"id": "nq2_opt1", "text": "Internal Protocol"}, {"id": "nq2_opt2", "text": "Internet Protocol"}, {"id": "nq2_opt3", "text": "Instruction Pointer"}, {"id": "nq2_opt4", "text": "Immediate Power"}],"correctOptionId": "nq2_opt2","skillArea": "BICT - Redes de Computadores","difficulty": "Fácil"},
@@ -60,7 +60,7 @@ challenge_1_questions_data = [
   {"id": "nq10","text": "Se um terreno retangular tem 20 metros de frente e 30 metros de profundidade, qual é a sua área total?","options": [{"id": "nq10_opt1", "text": "50 m²"},{"id": "nq10_opt2", "text": "100 m²"},{"id": "nq10_opt3", "text": "600 m²"},{"id": "nq10_opt4", "text": "500 m²"}],"correctOptionId": "nq10_opt3","skillArea": "Cálculo Básico - Geometria","difficulty": "Fácil"},
   {"id": "nq11","text": "Um projeto requer que uma peça metálica se expanda no máximo 0.05mm com o calor. O engenheiro precisa calcular a variação de temperatura permitida. Qual conceito físico é fundamental aqui?","options": [{"id": "nq11_opt1", "text": "Resistência Elétrica"},{"id": "nq11_opt2", "text": "Dilatação Térmica"},{"id": "nq11_opt3", "text": "Capacitância"},{"id": "nq11_opt4", "text": "Momento de Inércia"}],"correctOptionId": "nq11_opt2","skillArea": "Física Aplicada - Termologia","difficulty": "Médio"},
   {"id": "nq12","text": "Se você tem um conjunto de dados de medições e precisa encontrar o valor que ocorre com maior frequência, qual medida estatística você usaria?","options": [{"id": "nq12_opt1", "text": "Média Aritmética"},{"id": "nq12_opt2", "text": "Mediana"},{"id": "nq12_opt3", "text": "Moda"},{"id": "nq12_opt4", "text": "Desvio Padrão"}],"correctOptionId": "nq12_opt3","skillArea": "BICT - Estatística Básica","difficulty": "Fácil"},
-  # Novas perguntas para o Desafio 1 (nível 2º-6º período)
+  # Novas perguntas para o Desafio 1
   {"id": "nq13_comp", "text": "Em ciência da computação, qual das seguintes estruturas de dados é mais eficiente para acessar elementos por índice, mas menos eficiente para inserções ou remoções no meio da sequência?", "options": [{"id": "nq13_comp_opt1", "text": "Lista Encadeada"}, {"id": "nq13_comp_opt2", "text": "Árvore Binária"}, {"id": "nq13_comp_opt3", "text": "Array (Vetor)"}, {"id": "nq13_comp_opt4", "text": "Fila"}], "correctOptionId": "nq13_comp_opt3", "skillArea": "Eng. Computação - Estruturas de Dados", "difficulty": "Médio"},
   {"id": "nq14_civil", "text": "No dimensionamento de estruturas de concreto armado, qual a principal função das barras de aço (armadura) inseridas no concreto?", "options": [{"id": "nq14_civil_opt1", "text": "Aumentar o peso da estrutura"}, {"id": "nq14_civil_opt2", "text": "Resistir aos esforços de tração"}, {"id": "nq14_civil_opt3", "text": "Melhorar o isolamento térmico"}, {"id": "nq14_civil_opt4", "text": "Acelerar a secagem do concreto"}], "correctOptionId": "nq14_civil_opt2", "skillArea": "Eng. Civil - Concreto Armado", "difficulty": "Médio"},
   {"id": "nq15_mec", "text": "Qual das seguintes leis da Termodinâmica estabelece que a entropia de um sistema isolado nunca diminui com o tempo, tendendo a um máximo?", "options": [{"id": "nq15_mec_opt1", "text": "Lei Zero da Termodinâmica"}, {"id": "nq15_mec_opt2", "text": "Primeira Lei da Termodinâmica"}, {"id": "nq15_mec_opt3", "text": "Segunda Lei da Termodinâmica"}, {"id": "nq15_mec_opt4", "text": "Terceira Lei da Termodinâmica"}], "correctOptionId": "nq15_mec_opt3", "skillArea": "Eng. Mecânica - Termodinâmica", "difficulty": "Médio"},
@@ -69,7 +69,7 @@ challenge_1_questions_data = [
   {"id": "nq18_trans", "text": "No planejamento de transportes, o que representa o conceito de 'capacidade de uma via'?", "options": [{"id": "nq18_trans_opt1", "text": "A velocidade máxima permitida na via"}, {"id": "nq18_trans_opt2", "text": "O número máximo de veículos que podem passar por um ponto da via em um determinado período"}, {"id": "nq18_trans_opt3", "text": "O comprimento total da via"}, {"id": "nq18_trans_opt4", "text": "A largura da via em metros"}], "correctOptionId": "nq18_trans_opt2", "skillArea": "Eng. Transportes - Engenharia de Tráfego", "difficulty": "Médio"}
 ]
 
-# Novas questões para o Desafio 2 (nível mais básico)
+# Novas questões para o Desafio 2 (nível mais básico - calouros)
 challenge_2_questions_data = [
     # Engenharia de Computação (3 perguntas)
     {"id": "c2_comp1", "text": "Qual é a principal função de um 'algoritmo' na programação de computadores?", "options": [{"id": "c2_comp1_opt1", "text": "Escrever textos"}, {"id": "c2_comp1_opt2", "text": "Resolver problemas passo a passo"}, {"id": "c2_comp1_opt3", "text": "Desenhar imagens"}, {"id": "c2_comp1_opt4", "text": "Tocar música"}], "correctOptionId": "c2_comp1_opt2", "skillArea": "Eng. Computação - Fundamentos de Programação", "difficulty": "Muito Fácil"},
@@ -113,7 +113,7 @@ ALL_CHALLENGES = {
 }
 
 # TOTAL_QUESTIONS será dinâmico, dependendo do desafio escolhido para a sala
-# Não definimos TOTAL_QUESTIONS aqui globalmente, ele será obtido da sala
+# Não defini TOTAL_QUESTIONS aqui globalmente, ele será obtido da sala
 
 rooms_data = {} 
 rooms_lock = threading.Lock()
@@ -282,6 +282,7 @@ def _start_question_timer_for_room(room_pin):
         target=_question_timer_logic_for_room, room_pin_arg=room_pin 
     )
 
+    #parte inteligente do sistema, mas não é tão robusta
 def _calculate_recommendation_for_room(player_answers):
     if not player_answers: return "Nenhuma resposta registrada."
     correct_skill_counts = defaultdict(int)
@@ -292,7 +293,8 @@ def _calculate_recommendation_for_room(player_answers):
     if not correct_skill_counts: return "Nenhum acerto para sugerir área."
     best_skill_area = max(correct_skill_counts, key=correct_skill_counts.get)
     
-    # Mapeamento de áreas de habilidade para sugestões de curso
+    # Mapeamento de áreas de habilidade para sugestões de curso, essa é a parte inteligente do sistema, mas não é tão robusta
+    # quanto um modelo de IA real.
     course_suggestions = {
         "BICT - Lógica de Programação": "Engenharia de Computação, Ciência da Computação",
         "BICT - Redes de Computadores": "Engenharia de Computação", 
